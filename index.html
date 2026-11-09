@@ -51,16 +51,24 @@
   </section>
 
   <section id="capital" hidden>
-    <div class="story-card">
-      <h2>Столица</h2>
-      <p id="capital-text"></p>
-    </div>
-    <div id="capital-status" class="status"></div>
-    <div class="section-title">Площадь</div>
-    <div id="capital-buildings" class="cards"></div>
-    <div class="actions">
-      <button id="capital-hero-btn">Герой и рюкзак</button>
-      <button id="capital-menu-btn">В главное меню</button>
+    <div id="village" class="scene">
+      <img src="img/village.png" alt="Площадь столицы">
+      <button class="hotspot" id="spot-tavern" data-place="tavern" aria-label="Таверна"></button>
+      <button class="hotspot" id="spot-shop" data-place="shop" aria-label="Магазин"></button>
+      <button class="hotspot" id="spot-teacher" data-place="teacher" aria-label="Учитель"></button>
+      <button class="hotspot" id="spot-workshop" data-place="workshop" aria-label="Мастерская"></button>
+      <button class="hotspot" id="spot-closed" data-place="closed" aria-label="Закрытое здание"></button>
+      <button class="hotspot" id="spot-arena" data-place="arena" aria-label="Арена"></button>
+      <button class="hotspot" id="spot-gate" data-place="gate" aria-label="Лес"></button>
+      <span class="scene-tag" id="tag-arena">Арена</span>
+      <div class="scene-top">
+        <div id="capital-status" class="status"></div>
+        <p id="capital-text" class="intro"></p>
+      </div>
+      <div class="scene-bottom actions">
+        <button id="capital-hero-btn">Герой и рюкзак</button>
+        <button id="capital-menu-btn">В главное меню</button>
+      </div>
     </div>
   </section>
 
@@ -229,6 +237,10 @@
 
     <div class="actions">
       <button id="turn-btn" disabled>Сделать ход</button>
+      <button id="skill-btn" hidden></button>
+      <button id="auto-btn">Авто</button>
+      <button id="speed-btn" hidden>Скорость ×1</button>
+      <button id="tactic-btn" hidden>Тактика: Осторожно</button>
       <button id="after-btn" class="primary" hidden></button>
       <button id="after-hero-btn" hidden>Герой и рюкзак</button>
     </div>

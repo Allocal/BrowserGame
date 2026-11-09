@@ -90,7 +90,51 @@
         }
         return;
       }
-      el("teacher-text").textContent = `Ты уже выбрал путь: ${pathNameOf(p)}. Пока учитель больше ничему не может тебя научить.`;
+      el("teacher-text").textContent = `Ты уже выбрал путь: ${pathNameOf(p)}. Здесь можно выучить умения за жетоны арены и выбрать, какое взять в бой.`;
+      const a = p.arena;
+      for (const key in SKILLS) {
+        const s = SKILLS[key];
+        if (!skillAllowed(p, s)) continue;
+        const learned = p.skills.learned.includes(key);
+        const rankOk = a.rank >= s.rank;
+        const inSlot = p.skills.equipped === key;
+        const chips = learned ? [] : [chip(`${s.cost}`, a.tokens < s.cost ? "dim" : "gold", "token")].concat(rankOk ? [] : [chip(`Ранг «${ARENA_RANKS[s.rank].name}»`, "dim", "lock")]);
+        box.appendChild(infoCard({ icon: "star", iconSize: 34, title: s.name, sub: `${s.description} Перезарядка: ${s.cooldown} ходов.`, cls: inSlot ? "promo-card" : (learned || rankOk ? "" : "empty"), chips,
+          buttons: [learned
+            ? makeButton(inSlot ? "В слоте" : "Взять в бой", () => equipSkill(key), inSlot)
+            : makeButton("Выучить", () => learnSkill(key), !rankOk || a.tokens < s.cost)] }));
+      }
+    }
+
+    // Первое умение пути даётся бесплатно, чтобы новичок сразу попробовал систему (а герои, выбравшие путь до умений, не покупали его).
+    function grantFirstSkill(p) {
+      if (p.skills.learned.length > 0) return;
+      const key = Object.keys(SKILLS).find(k => SKILLS[k].rank === 0 && (SKILLS[k].scope === p.direction || SKILLS[k].scope === p.classKey));
+      if (!key) return;
+      p.skills.learned.push(key);
+      p.skills.equipped = key;
+    }
+
+    function skillAllowed(p, s) {
+      return s.scope === "any" || s.scope === p.classKey || s.scope === p.direction;
+    }
+
+    function learnSkill(key) {
+      const p = journey.player, s = SKILLS[key], a = p.arena;
+      if (p.skills.learned.includes(key) || !skillAllowed(p, s) || a.rank < s.rank || a.tokens < s.cost) return;
+      a.tokens -= s.cost;
+      p.skills.learned.push(key);
+      if (!p.skills.equipped) p.skills.equipped = key;
+      saveGame("capital");
+      renderTeacher();
+    }
+
+    function equipSkill(key) {
+      const p = journey.player;
+      if (!p.skills.learned.includes(key)) return;
+      p.skills.equipped = key;
+      saveGame("capital");
+      renderTeacher();
     }
 
     // Возвращаем потраченные очки: характеристики откатываются к стартовым, очки идут в «свободные».
@@ -109,6 +153,7 @@
         p.direction = null;
         enforceClassGear(p);
       }
+      grantFirstSkill(p);
       refreshDerived(p);
       p.health = Math.min(p.health, p.maxHealth);
       teacherArmed = null;
@@ -123,6 +168,7 @@
       const p = journey.player;
       refundStats(p);
       p.direction = key;
+      grantFirstSkill(p);
       refreshDerived(p);
       p.health = Math.min(p.health, p.maxHealth);
       teacherArmed = null;

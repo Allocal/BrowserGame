@@ -3,7 +3,63 @@
     const selectedStrikes = [];
     const selectedBlocks = new Set();
 
+    // Автопилот боя: паузы между ходами для ×1, ×2, ×4 (мс), включён ли он, текущая скорость и запланированный ход.
+    const AUTO_SPEEDS = [1200, 600, 250];
+    let autoOn = false;
+    let autoSpeedIndex = 0;
+    let autoTacticIndex = 0;
+    let autoTimer = null;
+    let skillArmed = false; // игрок нажал кнопку умения: оно применится в этом ходу
+
     const el = id => document.getElementById(id);
+
+    function refreshSkillButton() {
+      const btn = el("skill-btn");
+      btn.hidden = !game.skill;
+      if (!game.skill) return;
+      const s = SKILLS[game.skill.key];
+      btn.textContent = game.skill.cd > 0 ? `${s.name} (через ${game.skill.cd})` : s.name;
+      btn.title = s.description;
+      btn.disabled = game.over || autoOn || !skillReady(game);
+      btn.className = skillArmed ? "on" : "";
+    }
+
+    function setAuto(on) {
+      autoOn = on;
+      el("auto-btn").textContent = on ? "Взять управление" : "Авто";
+      el("speed-btn").hidden = !on;
+      el("speed-btn").textContent = "Скорость ×" + [1, 2, 4][autoSpeedIndex];
+      el("tactic-btn").hidden = !(on && game?.skill);
+      el("tactic-btn").textContent = "Тактика: " + TACTICS[autoTacticIndex].name;
+      if (!on) {
+        skillArmed = false;
+        clearTimeout(autoTimer);
+        autoTimer = null;
+      }
+      if (game) refreshSelection();
+    }
+
+    function autoStep() {
+      if (!autoOn || !game || game.over) return;
+      const tactic = TACTICS[autoTacticIndex].key;
+      if (tactic === "stop" && game.skill && SKILLS[game.skill.key].auto === "tactic" && autoWantsSkill(game, tactic)) {
+        setAuto(false);
+        addLogLine(`Авто остановлено: время применить «${SKILLS[game.skill.key].name}».`, "info");
+        return;
+      }
+      const pick = autoPick(game);
+      selectedStrikes.length = 0;
+      selectedStrikes.push(...pick.strikes);
+      selectedBlocks.clear();
+      pick.blocks.forEach(z => selectedBlocks.add(z));
+      skillArmed = autoWantsSkill(game, tactic);
+      refreshSelection();
+      autoTimer = setTimeout(() => {
+        skillArmed = autoWantsSkill(game, TACTICS[autoTacticIndex].key); // тактику могли сменить за время паузы
+        onTurn();
+        autoStep();
+      }, AUTO_SPEEDS[autoSpeedIndex]);
+    }
 
     function showScreen(id) {
       ["menu", "training-setup", "story", "capital", "arena", "arenashop", "tavern", "shop", "teacher", "hero", "levelup", "battle", "expedition"].forEach(s => { el(s).hidden = (s !== id); });
@@ -52,6 +108,8 @@
         hp.append(mtop, mbar);
       }
       hud.append(hp, chip(`ур. ${p.level}`, "gold", "level"), chip(formatMoney(p.copper), "gold", "coin"));
+      const path = pathNameOf(p);
+      if (path) hud.append(chip(path, "dim", p.classKey === "mage" ? "flask" : "shield"));
     }
 
     // Раз в секунду: здоровье подрастает само, панель и экран героя показывают это без перехода между экранами.
@@ -83,7 +141,7 @@
         const btn = document.createElement("button");
         btn.textContent = name;
         btn.className = "zone" + (selected.has(i) ? " on" : "");
-        btn.disabled = game.over;
+        btn.disabled = game.over || autoOn;
         btn.addEventListener("click", () => {
           if (selected.has(i)) selected.delete(i);
           else if (selected.size < limit) selected.add(i);
@@ -101,7 +159,7 @@
         const btn = document.createElement("button");
         btn.textContent = count > 0 ? `${name} ×${count}` : name;
         btn.className = "zone" + (count > 0 ? " on" : "");
-        btn.disabled = game.over;
+        btn.disabled = game.over || autoOn;
         btn.addEventListener("click", () => {
           if (selectedStrikes.length < limit) selectedStrikes.push(i);
           refreshSelection();
@@ -152,9 +210,10 @@
       el("strike-reset").disabled = game.over;
       updateFigureMarks();
 
-      el("turn-btn").disabled = game.over
+      el("turn-btn").disabled = game.over || autoOn
         || selectedStrikes.length !== strikeLimit
         || selectedBlocks.size !== blockLimit;
+      refreshSkillButton();
     }
 
     function refreshHealth() {
@@ -188,6 +247,7 @@
       // prepend ставит строки сверху, поэтому пишем в обратном порядке: новый ход окажется наверху целиком.
       const lines = [];
       lines.push({ text: `Ход ${game.turn}`, cls: "turn-title" });
+      if (turnResult.skillUsed) lines.push({ text: `Умение «${SKILLS[turnResult.skillUsed].name}»: ${SKILLS[turnResult.skillUsed].description}`, cls: "info" });
       lines.push({ text: turnResult.surprised
         ? `Твои блоки: ${zoneNames(turnResult.playerBlocks)}. ${game.bot.name} не успел среагировать: он не бьёт и не блокирует.`
         : `Твои блоки: ${zoneNames(turnResult.playerBlocks)}. Блоки противника: ${zoneNames(turnResult.botBlocks)}.` });
@@ -234,6 +294,8 @@
 
     function startBattle(player, bot, introText, progressText, finishHandler) {
       game = createGame(player, bot);
+      skillArmed = false;
+      setAuto(false);
       onBattleFinish = finishHandler;
       selectedStrikes.length = 0;
       selectedBlocks.clear();
@@ -260,7 +322,8 @@
     }
 
     function onTurn() {
-      const turnResult = playTurn(game, [...selectedStrikes], [...selectedBlocks]);
+      const turnResult = playTurn(game, [...selectedStrikes], [...selectedBlocks], skillArmed);
+      skillArmed = false;
       selectedStrikes.length = 0;
       selectedBlocks.clear();
       logTurn(turnResult);

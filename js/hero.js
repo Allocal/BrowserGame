@@ -61,7 +61,7 @@
         name, level: stats.level, strength: stats.strength, endurance: stats.endurance, agility: stats.agility ?? BASE_STAT,
         attention: stats.attention ?? BASE_STAT,
         intelligence: stats.intelligence ?? BASE_STAT, classKey: CLASSES[stats.classKey] ? stats.classKey : "warrior",
-        classChosen: false, spells: stats.classKey === "mage" ? ["arrow"] : [],
+        classChosen: false, spells: stats.classKey === "mage" ? ["arrow"] : [], skills: { learned: [], equipped: null },
         equipment: fullEquipment(equipment), gearLabel: label ?? null,
         xp: 0, pendingPoints: 0, inventory: {}, items: [], stats: newStats(), direction: null, copper: 0, arena: newArenaState()
       };

@@ -14,6 +14,8 @@
     // style — привычки врага: strike/block — веса зон (Голова, Корпус, Пояс, Ноги; 1 — обычно), react — как сильно он реагирует на твой прошлый ход.
     // xp — множитель к опыту равного боя на арене: в лесу опыта больше, потому что нет лечения между боями и поражение отнимает добычу.
     // drops: шанс (0…1) и количество; copper — множитель к базовой денежной награде уровня.
+    // Общий множитель урона диких врагов: ручка сложности, подобрана замерами (при ×1 бои с обычными врагами были почти непроигрываемыми).
+    const WILD_DMG_FACTOR = 1.5;
     const WILD_ENEMIES = {
       wolf:   { name: "Волк", gear: "none", hp: 0.8, dmg: 1.4, xp: 1.2, style: { strike: [0.6, 1, 1.2, 1.6], react: 0.4 }, drops: [{ item: "wolfPelt", chance: 0.45, min: 1, max: 1 }] },
       boar:   { name: "Кабан", gear: "none", hp: 1.0, dmg: 1.2, xp: 1.3, style: { strike: [0.7, 1.8, 1, 0.8], react: 0.3 }, drops: [{ item: "boarTusk", chance: 0.4, min: 1, max: 2 }] },
@@ -406,7 +408,7 @@
       const base = arenaFighterStats(L).dmg;
       return {
         name: t.name, style: t.style, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp), magicResist: Math.floor(0.4 * L),
-        dmg: [Math.round(base[0] * t.dmg * dmgBonus), Math.round(base[1] * t.dmg * dmgBonus)],
+        dmg: [Math.round(base[0] * t.dmg * WILD_DMG_FACTOR * dmgBonus), Math.round(base[1] * t.dmg * WILD_DMG_FACTOR * dmgBonus)],
         armor: t.armored ? [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)] : null
       };
     }

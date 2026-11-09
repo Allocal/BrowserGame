@@ -41,6 +41,7 @@
       { key: "stats", name: "Характеристики" },
       { key: "details", name: "Подробно" },
       { key: "equipment", name: "Снаряжение" },
+      { key: "skills", name: "Умения" },
       { key: "bag", name: "Рюкзак" },
       { key: "journal", name: "Журнал" }
     ];
@@ -109,6 +110,7 @@
       if (heroTab === "stats") renderHeroStats(p, body);
       else if (heroTab === "details") renderHeroDetails(p, body);
       else if (heroTab === "equipment") renderHeroEquipment(p, body);
+      else if (heroTab === "skills") renderHeroSkills(p, body);
       else if (heroTab === "journal") renderHeroJournal(p, body);
       else renderHeroBag(p, body);
       // Любое изменение снаряжения или еды сразу запоминается.
@@ -286,6 +288,24 @@
       buttons.forEach(b => holder.appendChild(b));
       card.appendChild(holder);
       return card;
+    }
+
+    function renderHeroSkills(p, body) {
+      if (p.skills.learned.length === 0) {
+        body.appendChild(mk("p", "muted", "Умений пока нет. Их можно выучить у учителя в городе."));
+        return;
+      }
+      const cards = mk("div", "cards");
+      p.skills.learned.forEach(key => {
+        const s = SKILLS[key];
+        const equipped = p.skills.equipped === key;
+        const button = makeButton(equipped ? "В слоте" : "Взять в бой", () => {
+          p.skills.equipped = key;
+          renderHero();
+        }, equipped);
+        cards.appendChild(bagCard(icon("star", 24), s.name, `${s.description} Перезарядка: ${s.cooldown} ходов.`, [button]));
+      });
+      body.appendChild(cards);
     }
 
     function renderHeroBag(p, body) {

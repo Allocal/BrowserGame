@@ -19,22 +19,18 @@
         ? "Шумная площадь столицы. Вокруг торговцы, стража и такие же искатели удачи, как ты."
         : "Шумная площадь столицы. Начни с учителя воинов: он поможет выбрать путь.");
       capitalNote = ""; // сообщение о вылазке показывается один раз
-      setStatus("capital-status", p, pathNameOf(p) ? [chip(pathNameOf(p), "dim", p.classKey === "mage" ? "flask" : "shield")] : [], regenText(p));
-      const list = el("capital-buildings");
-      list.replaceChildren();
-      BUILDINGS.forEach(b => {
-        const hint = b.key === "teacher" && !pathNameOf(p) && b.ready ? [chip("Выбери путь", "blue", "star")] : [];
-        const card = infoCard({
-          icon: b.icon, iconSize: 38, title: b.name, sub: b.description, cls: `building${b.ready ? "" : " empty"}`, chips: hint,
-          buttons: [makeButton(b.ready ? "Зайти" : "Закрыто", () => openBuilding(b.key), !b.ready)]
-        });
-        list.appendChild(card);
-      });
+      setStatus("capital-status", p, [], regenText(p));
       saveGame("capital");
       showScreen("capital");
     }
 
+    const SOON = {
+      workshop: "Мастерская пока закрыта: мастер ещё не приехал. Загляни позже.",
+      closed: "Дверь заперта на тяжёлый замок. Похоже, это здание откроется позже."
+    };
+
     function openBuilding(key) {
+      if (SOON[key]) { el("capital-text").textContent = SOON[key]; return; }
       if (key === "gate") startExpedition("forest");
       if (key === "teacher") openTeacher();
       if (key === "arena") showArena();

@@ -52,7 +52,7 @@
         index: journey.index, applied: journey.applied, levelsGained: journey.levelsGained,
         expedition: journey.expedition ?? null, world: journey.world ?? null,
         player: {
-          direction: p.direction, copper: p.copper, name: p.name, level: p.level, xp: p.xp, strength: p.strength, endurance: p.endurance, agility: p.agility, attention: p.attention, intelligence: p.intelligence, classKey: p.classKey, classChosen: p.classChosen, spells: p.spells, pendingPoints: p.pendingPoints, arena: p.arena, regenAt: p.regenAt,
+          direction: p.direction, copper: p.copper, name: p.name, level: p.level, xp: p.xp, strength: p.strength, endurance: p.endurance, agility: p.agility, attention: p.attention, intelligence: p.intelligence, classKey: p.classKey, classChosen: p.classChosen, spells: p.spells, skills: p.skills, pendingPoints: p.pendingPoints, arena: p.arena, regenAt: p.regenAt,
           equipment: p.equipment, inventory: p.inventory, items: p.items, stats: p.stats, health: p.health
         }
       };
@@ -132,6 +132,11 @@
       return cleanItem(v);
     }
 
+    function cleanSkills(raw) {
+      const learned = Array.isArray(raw?.learned) ? raw.learned.filter(k => SKILLS[k]) : [];
+      return { learned, equipped: learned.includes(raw?.equipped) ? raw.equipped : null };
+    }
+
     function loadGame() {
       const s = readSave();
       if (!s) { refreshMenu(); return; }
@@ -156,6 +161,8 @@
         p.classChosen = sp.classChosen ?? Boolean(sp.direction); // старые сохранения: выбравший направление уже выбрал и класс
         enforceClassGear(p);
         p.spells = Array.isArray(sp.spells) ? sp.spells.filter(k => SPELLS[k]) : (p.classKey === "mage" ? ["arrow"] : []);
+        p.skills = cleanSkills(sp.skills);
+        grantFirstSkill(p);
         p.arena = cleanArena(sp.arena);
         p.stats = cleanStats(sp.stats);
         p.regenAt = Number.isFinite(sp.regenAt) ? sp.regenAt : Date.now();

@@ -33,6 +33,25 @@
     el("teacher-back-btn").addEventListener("click", showCapital);
     el("hero-back-btn").addEventListener("click", closeHero);
     el("turn-btn").addEventListener("click", onTurn);
+    el("tactic-btn").addEventListener("click", () => {
+      autoTacticIndex = (autoTacticIndex + 1) % TACTICS.length;
+      setAuto(autoOn);
+    });
+    el("skill-btn").addEventListener("click", () => {
+      skillArmed = !skillArmed;
+      refreshSkillButton();
+    });
+    el("village").querySelectorAll(".hotspot").forEach(btn => {
+      btn.addEventListener("click", () => openBuilding(btn.dataset.place));
+    });
+    el("auto-btn").addEventListener("click", () => {
+      setAuto(!autoOn);
+      if (autoOn) autoStep();
+    });
+    el("speed-btn").addEventListener("click", () => {
+      autoSpeedIndex = (autoSpeedIndex + 1) % AUTO_SPEEDS.length;
+      setAuto(autoOn);
+    });
     el("strike-reset").addEventListener("click", () => {
       selectedStrikes.length = 0;
       refreshSelection();

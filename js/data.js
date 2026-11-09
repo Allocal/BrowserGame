@@ -30,11 +30,35 @@
       const silver = Math.floor(total / COPPER_PER_SILVER) % SILVER_PER_GOLD;
       const cop = total % COPPER_PER_SILVER;
       const parts = [];
-      if (gold) parts.push(`${gold}з`);
-      if (silver) parts.push(`${silver}с`);
-      if (cop || parts.length === 0) parts.push(`${cop}м`);
+      if (gold) parts.push(`${gold} зол.`);
+      if (silver) parts.push(`${silver} сер.`);
+      if (cop || parts.length === 0) parts.push(`${cop} мед.`);
       return parts.join(" ");
     }
+    // Умения: герой хранит только ключи (изученные и выбранное в слоте), здесь цена, условия и описание.
+    // scope: кому можно (any, класс mage или направление воина); rank: нужный ранг арены; cost: жетоны арены;
+    // auto: "free" — автопилот применяет сам, "tactic" — только если так сказано в выбранной тактике.
+    const SKILLS = {
+      powerStrike: { name: "Мощный удар", scope: "damager", cooldown: 4, rank: 0, cost: 5, auto: "free",
+                     description: "Твои удары в этом ходу наносят двойной урон." },
+      arcaneBurst: { name: "Мощный заряд", scope: "mage", cooldown: 4, rank: 0, cost: 5, auto: "free",
+                     description: "Заклинание бьёт вдвое сильнее за ту же ману." },
+      stance:      { name: "Стойка", scope: "tank", cooldown: 6, rank: 0, cost: 5, auto: "free",
+                     description: "Урон по тебе вдвое ниже в этом и двух следующих ходах." },
+      evade:       { name: "Уклонение", scope: "evader", cooldown: 6, rank: 0, cost: 5, auto: "tactic",
+                     description: "В этом ходу ни один удар врага тебя не задевает." },
+      secondWind:  { name: "Второе дыхание", scope: "any", cooldown: 8, rank: 1, cost: 10, auto: "tactic",
+                     description: "Лечит 25% максимального здоровья." }
+    };
+    // Тактики автопилота для защитных умений: healBelow — при какой доле здоровья он их применяет (0 — никогда).
+    // "stop" с тем же порогом не применяет защиту сам, а останавливает авто, чтобы игрок решил сам.
+    const TACTICS = [
+      { key: "careful",    name: "Осторожно", healBelow: 0.4 },
+      { key: "aggressive", name: "Агрессивно", healBelow: 0 },
+      { key: "stop",       name: "Остановить на защите", healBelow: 0.4 }
+    ];
+    // Числа эффектов умений (сами умения описаны выше, применяются в playTurn).
+    const SKILL_FX = { burstMult: 2, stanceFactor: 0.5, stanceTurns: 3, healShare: 0.25 };
     // Название выбранного пути героя: у мага это класс, у воина направление; null, если ещё не выбран.
     const pathNameOf = c => (c.classKey === "mage" ? CLASSES.mage.name : (c.direction ? DIRECTIONS[c.direction].name : null));
     const classOf = c => CLASSES[c.classKey] ?? CLASSES.warrior;
