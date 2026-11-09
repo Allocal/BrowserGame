@@ -1,0 +1,2949 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Моя игра</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; background: #1b1b22; color: #eee; }
+    h1 { margin-bottom: 4px; }
+    h2 { margin: 8px 0; }
+    h3 { margin: 18px 0 8px; font-size: 1rem; }
+    p { line-height: 1.5; }
+    label { display: block; margin: 10px 0; }
+    #hero-name-input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 8px 10px; font: inherit; color: inherit; background: #2a2b36; border: 1px solid #4a4c5c; border-radius: 8px; }
+    select { margin-left: 8px; padding: 4px; }
+    button { font: inherit; padding: 8px 14px; border: 1px solid #555; border-radius: 6px; background: #2c2c38; color: #eee; cursor: pointer; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .menu-buttons { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin-top: 16px; }
+    .primary { background: #3b6fd6; border-color: #6c9bff; }
+    .zones { display: flex; gap: 8px; flex-wrap: wrap; }
+    .zone.on { background: #3b6fd6; border-color: #6c9bff; }
+    .bar { background: #3a1f1f; border-radius: 4px; height: 14px; overflow: hidden; }
+    .fill { background: #4caf50; height: 100%; width: 100%; transition: width 0.3s; }
+    .xpfill { background: #6c9bff; width: 0; }
+    .manafill { background: #9a7bff; }
+    .arena { display: flex; gap: 16px; }
+    .fighter { flex: 1; min-width: 0; }
+    .figure { margin-top: 8px; background: #23232d; border-radius: 8px; padding: 6px; transition: filter 0.4s, opacity 0.4s; }
+    .figure svg { display: block; width: 100%; height: 260px; }
+    .figure.dead { filter: grayscale(1); opacity: 0.45; }
+    .z { fill: #c9a27e; stroke: #3a2a1a; stroke-width: 2; transition: fill 0.2s; }
+    .z.target { stroke: #ff5252; stroke-width: 4; }
+    .z.guard { stroke: #6c9bff; stroke-width: 4; }
+    .z.flash-hit { fill: #ff5252; }
+    .z.flash-block { fill: #6c9bff; }
+    .z.flash-dodge { fill: #6fe3ff; }
+    .z.flash-crit { fill: #ffd54f; stroke: #fff; stroke-width: 3; }
+    .lbl { fill: #fff; font-size: 16px; font-weight: bold; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 3px; pointer-events: none; }
+    .actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+    #log { margin-top: 20px; border-top: 1px solid #444; padding-top: 10px; }
+    #log div { padding: 3px 0; }
+    .turn-title { font-weight: bold; margin-top: 10px; color: #aaa; }
+    .hit { color: #ff8a80; }
+    .good { color: #8be28b; }
+    .crit { color: #ffd54f; font-weight: bold; font-size: 1.05rem; }
+    .miss { color: #9aa; }
+    .dodge { color: #6fe3ff; font-weight: bold; }
+    .result { font-size: 1.2rem; font-weight: bold; margin: 14px 0; }
+    .progress { color: #9aa; font-size: 0.9rem; margin-bottom: 6px; }
+    .story-card { background: #23232d; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+    .effect { color: #8be28b; font-weight: bold; }
+    .status { color: #9aa; margin: 10px 0 16px; }
+    .intro { font-style: italic; color: #ccd; }
+    .hero-list div { padding: 4px 0; }
+    .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #33333f; flex-wrap: wrap; }
+    .row .btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row button { padding: 5px 10px; font-size: 0.9rem; }
+    .muted { color: #9aa; }
+    .soon { color: #6b6b78; }
+    .promo { color: #e0b84a; font-weight: bold; }
+    /* Экран героя: шапка, вкладки, карточки */
+    .hero-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .hero-head h2 { margin: 0; }
+    .chip { display: inline-flex; align-items: center; gap: 5px; background: #2d2e3b; border: 1px solid #44465a; border-radius: 999px; padding: 3px 11px; font-size: 0.88rem; white-space: nowrap; }
+    .chip .ico { width: 16px; height: 16px; }
+    .chip.gold { color: #ffd54f; border-color: #6b5a20; }
+    .chip.red { color: #ff8a80; border-color: #6b3a3a; }
+    .chip.green { color: #8be28b; border-color: #2f5a2f; }
+    .chip.cyan { color: #6fe3ff; border-color: #25606e; }
+    .chip.blue { color: #8fb4ff; border-color: #34508c; }
+    .chip.dim { color: #8a8a99; }
+    .ico { display: inline-flex; width: 22px; height: 22px; flex: none; }
+    .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    #hud { position: sticky; top: 0; z-index: 10; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; background: #23242f; border: 1px solid #3a3c4d; border-radius: 10px; padding: 8px 12px; margin: 6px 0 12px; box-shadow: 0 4px 10px rgba(0,0,0,.35); }
+    #hud[hidden] { display: none; }
+    #hud .hud-hp { flex: 1 1 220px; min-width: 200px; }
+    #hud .hud-hp-top { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; color: #ff8a80; }
+    #hud .hud-hp-top .ico { width: 16px; height: 16px; }
+    #hud .hud-mana-top { color: #b79bff; margin-top: 4px; }
+    #hud .hud-regen { margin-left: auto; color: #9aa; font-size: 0.82rem; }
+    #hud .bar { margin-top: 4px; height: 8px; }
+    .exp-map { background: #20212b; border: 1px solid #33344a; border-radius: 10px; padding: 6px; margin: 10px 0; }
+    .map-svg { width: 100%; max-height: 340px; display: block; }
+    .map-path { stroke: #4a4d66; stroke-width: 0.8; stroke-dasharray: 2 1.5; }
+    .map-node { fill: #20212b; stroke: #8fb4ff; stroke-width: 0.9; }
+    .map-node.here { fill: #ffd54f; stroke: #ffd54f; }
+    .map-node.seen { fill: #3a3d57; }
+    .map-node.new { stroke-dasharray: 1.5 1; }
+    .map-label { fill: #ccd; font-size: 4.2px; text-anchor: middle; }
+    .chiprow { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; align-items: center; }
+    .card-top { display: flex; align-items: center; gap: 8px; }
+    .card-top .card-title { margin: 0; }
+    .card.building { padding: 14px; gap: 6px; }
+    .card.building .ico { width: 38px; height: 38px; color: #8fb4ff; }
+    .card.building .name { font-size: 1.1rem; }
+    .cards.offers { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+    .cards .card .btns { margin-top: auto; }
+    .cards .card.offer .offer-section:last-child { margin-top: auto; }
+    .offer-section { border-top: 1px solid #33333f; padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 6px; }
+    .offer-label { color: #9aa; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .card.promo-card { border-color: #8a6f1d; background: #2a2616; }
+    .pips { display: inline-flex; gap: 3px; align-items: center; }
+    .pip { width: 9px; height: 14px; border-radius: 3px; background: #2d2e3b; border: 1px solid #44465a; }
+    .pip.on { background: #6c9bff; border-color: #8fb4ff; }
+    .meter-small { margin: 4px 0 10px; }
+    details { margin: 8px 0; color: #ccd; }
+    details summary { cursor: pointer; color: #9aa; }
+    details p { margin: 8px 0 0; font-size: 0.92rem; }
+    .cards .card .btns button { flex: 1 1 auto; }
+    .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    .meter-label { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; color: #ccd; }
+    .points-banner { margin-top: 14px; padding: 10px 12px; border: 1px solid #6c9bff; background: #1f2a45; border-radius: 8px; }
+    .points-banner .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .tabs { display: flex; gap: 6px; margin: 14px 0 10px; }
+    .tab { flex: 1; padding: 9px 6px; border-radius: 8px; }
+    .tab.on { background: #3b6fd6; border-color: #6c9bff; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .card { background: #23232d; border: 1px solid #3a3b4a; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .card-title { color: #9aa; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
+    .big { font-size: 1.6rem; font-weight: bold; line-height: 1.1; }
+    .big.small { font-size: 1.15rem; }
+    .card-sub { color: #ccd; font-size: 0.85rem; }
+    .card button { margin-top: 6px; padding: 4px 10px; font-size: 0.85rem; }
+    .card.wide { grid-column: 1 / -1; }
+    .card .name { font-weight: bold; }
+    .card .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .card.empty { opacity: 0.6; }
+    .section-title { margin: 16px 0 8px; font-size: 0.9rem; color: #9aa; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-red .big { color: #ff8a80; }
+    .stat-green .big { color: #8be28b; }
+    .stat-cyan .big { color: #6fe3ff; }
+    .stat-gold .big { color: #ffd54f; }
+    .stat-violet .big { color: #c9a0ff; }
+  </style>
+</head>
+<body>
+  <h1>Моя игра</h1>
+  <div id="hud" hidden></div>
+
+  <section id="menu">
+    <p>Путь из маленькой деревни в столицу. Дорога опасна, но каждый шаг делает тебя сильнее.</p>
+    <div class="menu-buttons">
+      <label id="name-row" for="hero-name-input">Имя героя для нового путешествия:
+        <input id="hero-name-input" type="text" maxlength="20" placeholder="Путник" autocomplete="off">
+      </label>
+      <button id="continue-btn" class="primary" hidden>Продолжить путешествие</button>
+      <button id="journey-btn" class="primary">Начать путешествие</button>
+      <button id="training-btn">Тренировочный бой (любое снаряжение)</button>
+    </div>
+    <p id="save-info" class="muted"></p>
+  </section>
+
+  <section id="training-setup" hidden>
+    <h2>Тренировочный бой</h2>
+    <label>Твоё снаряжение: <select id="player-gear"></select></label>
+    <label>Снаряжение бота: <select id="bot-gear"></select></label>
+    <label>Твоя Ловкость (стартовая 5): <input id="player-agility" type="number" min="5" max="60" value="5"></label>
+    <label>Ловкость бота: <input id="bot-agility" type="number" min="5" max="60" value="5"></label>
+    <div class="actions">
+      <button id="start-btn" class="primary">Начать бой</button>
+      <button id="training-back-btn">Назад</button>
+    </div>
+  </section>
+
+  <section id="story" hidden>
+    <div id="story-progress" class="progress"></div>
+    <div class="story-card">
+      <h2 id="story-title"></h2>
+      <p id="story-text"></p>
+      <p id="story-effect" class="effect"></p>
+    </div>
+    <div id="story-status" class="status"></div>
+    <div class="actions">
+      <button id="story-btn" class="primary"></button>
+      <button id="story-hero-btn">Герой и рюкзак</button>
+    </div>
+    <p id="story-save-note" class="muted"></p>
+  </section>
+
+  <section id="capital" hidden>
+    <div class="story-card">
+      <h2>Столица</h2>
+      <p id="capital-text"></p>
+    </div>
+    <div id="capital-status" class="status"></div>
+    <div class="section-title">Площадь</div>
+    <div id="capital-buildings" class="cards"></div>
+    <div class="actions">
+      <button id="capital-hero-btn">Герой и рюкзак</button>
+      <button id="capital-menu-btn">В главное меню</button>
+    </div>
+  </section>
+
+  <section id="expedition" hidden>
+    <div class="story-card">
+      <h2 id="exp-title"></h2>
+      <p id="exp-text"></p>
+    </div>
+    <div id="exp-status" class="status"></div>
+    <div id="exp-map" class="exp-map"></div>
+    <p id="exp-log" class="effect"></p>
+    <div id="exp-find" class="cards"></div>
+    <div class="section-title">Куда идти</div>
+    <div id="exp-moves" class="cards"></div>
+    <p id="exp-home-hint" class="muted"></p>
+    <div class="actions">
+      <button id="exp-look-btn">Осмотреться</button>
+      <button id="exp-hero-btn">Герой и рюкзак</button>
+      <button id="exp-home-btn" class="primary">Вернуться в город</button>
+    </div>
+  </section>
+
+  <section id="arena" hidden>
+    <div class="story-card">
+      <h2>Арена</h2>
+      <p>Бои на арене безопасны: поражение ничего не отнимает.</p>
+      <details><summary>Как это работает</summary>
+        <p>В обычном бою ты получаешь опыт и деньги, он бесплатный и без ограничений. В бою за ранг ты копишь очки ранга и жетоны арены: опыта там в четыре раза меньше, а денег нет. Такой бой тратит билеты арены, они возвращаются сами со временем. Чем сильнее категория соперника, тем больше билетов он стоит и тем больше награда. Проигранный бой билеты не возвращает. Когда очков ранга хватает, открывается бой за повышение (без билетов). Жетоны тратятся в лавке арены.</p>
+      </details>
+    </div>
+    <div id="arena-status" class="status"></div>
+    <div id="arena-list" class="cards offers"></div>
+    <div class="actions">
+      <button id="arena-shop-btn">Лавка жетонов</button>
+      <button id="arena-hero-btn">Герой и рюкзак</button>
+      <button id="arena-back-btn" class="primary">Назад на площадь</button>
+    </div>
+  </section>
+
+  <section id="tavern" hidden>
+    <div class="story-card">
+      <h2>Таверна</h2>
+      <p>Здоровье в городе восстанавливается само, но медленно. За деньги хозяин поставит тебя на ноги сразу.</p>
+    </div>
+    <div id="tavern-status" class="status"></div>
+    <p id="tavern-msg" class="effect"></p>
+    <div id="tavern-list" class="cards"></div>
+    <div class="actions">
+      <button id="tavern-hero-btn">Герой и рюкзак</button>
+      <button id="tavern-back-btn" class="primary">Назад на площадь</button>
+    </div>
+  </section>
+
+  <section id="arenashop" hidden>
+    <div class="story-card">
+      <h2>Лавка жетонов</h2>
+      <p>Звания и особые припасы за жетоны арены. Силу они не добавляют.</p>
+    </div>
+    <div id="arenashop-status" class="status"></div>
+    <p id="arenashop-msg" class="effect"></p>
+    <div id="arenashop-list" class="cards"></div>
+    <div class="actions">
+      <button id="arenashop-back-btn" class="primary">Назад на арену</button>
+    </div>
+  </section>
+
+  <section id="shop" hidden>
+    <div class="story-card">
+      <h2>Магазин</h2>
+      <p>Торговец покупает всё: снаряжение за 40% цены, трофеи по их стоимости.</p>
+      <details><summary>Подробнее</summary>
+        <p>Надетые вещи сначала нужно снять на экране героя. Лучшие вещи здесь не продаются: их находят в приключениях или делают самому.</p>
+      </details>
+    </div>
+    <div id="shop-status" class="status"></div>
+    <div class="section-title">Купить</div>
+    <div id="shop-buy" class="cards"></div>
+    <p id="shop-teaser" class="muted"></p>
+    <div class="section-title">Продать</div>
+    <div id="shop-sell" class="cards"></div>
+    <div class="actions">
+      <button id="shop-hero-btn">Герой и рюкзак</button>
+      <button id="shop-back-btn" class="primary">Назад на площадь</button>
+    </div>
+  </section>
+
+  <section id="teacher" hidden>
+    <div class="story-card">
+      <h2>Учитель воинов</h2>
+      <p id="teacher-text"></p>
+      <p id="teacher-result" class="effect"></p>
+    </div>
+    <div id="teacher-choices" class="cards"></div>
+    <div class="actions">
+      <button id="teacher-hero-btn">Герой и рюкзак</button>
+      <button id="teacher-back-btn" class="primary">Назад на площадь</button>
+    </div>
+  </section>
+
+  <section id="hero" hidden>
+    <div class="story-card">
+      <div class="hero-head">
+        <h2 id="hero-title"></h2>
+        <span id="hero-money" class="chip gold"></span>
+      </div>
+      <p id="hero-msg" class="effect"></p>
+      <div class="meters">
+        <div>
+          <div class="meter-label"><span>Здоровье</span><span id="hero-hp"></span></div>
+          <div class="bar"><div id="hero-hp-bar" class="fill"></div></div>
+        </div>
+        <div>
+          <div class="meter-label"><span>Опыт</span><span id="hero-xp"></span></div>
+          <div class="bar"><div id="hero-xp-bar" class="fill xpfill"></div></div>
+        </div>
+        <div id="hero-mana-wrap" hidden>
+          <div class="meter-label"><span>Мана</span><span id="hero-mana"></span></div>
+          <div class="bar"><div id="hero-mana-bar" class="fill manafill" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div id="hero-points" class="points-banner" hidden></div>
+    </div>
+    <div id="hero-tabs" class="tabs"></div>
+    <div id="hero-tab-body"></div>
+    <div class="actions"><button id="hero-back-btn" class="primary">Назад</button></div>
+  </section>
+
+  <section id="levelup" hidden>
+    <div class="story-card">
+      <h2 id="levelup-title"></h2>
+      <p id="levelup-points" class="effect"></p>
+      <div id="levelup-stats" class="cards"></div>
+    </div>
+    <button id="levelup-btn" class="primary">Продолжить путь</button>
+  </section>
+
+  <section id="battle" hidden>
+    <div id="battle-progress" class="progress"></div>
+    <p id="battle-intro" class="intro"></p>
+    <div class="arena">
+      <div class="fighter">
+        <div><span id="player-name"></span>: <span id="player-health"></span> / <span id="player-max"></span></div>
+        <div class="bar"><div id="player-bar" class="fill"></div></div>
+        <div id="player-mana-row" hidden>
+          <div>Мана: <span id="player-mana"></span> / <span id="player-mana-max"></span></div>
+          <div class="bar"><div id="player-mana-bar" class="fill manafill"></div></div>
+        </div>
+        <div id="player-xp" class="progress"></div>
+        <div id="player-figure" class="figure"></div>
+        <div id="player-gear-name"></div>
+      </div>
+      <div class="fighter">
+        <div><span id="bot-name"></span>: <span id="bot-health"></span> / <span id="bot-max"></span></div>
+        <div class="bar"><div id="bot-bar" class="fill"></div></div>
+        <div id="bot-figure" class="figure"></div>
+        <div id="bot-gear-name"></div>
+      </div>
+    </div>
+
+    <h3 id="strike-title"></h3>
+    <div id="strike-zones" class="zones"></div>
+    <button id="strike-reset" style="margin-top: 8px;">Сбросить удары</button>
+
+    <h3 id="block-title"></h3>
+    <div id="block-zones" class="zones"></div>
+
+    <div class="actions">
+      <button id="turn-btn" disabled>Сделать ход</button>
+      <button id="after-btn" class="primary" hidden></button>
+      <button id="after-hero-btn" hidden>Герой и рюкзак</button>
+    </div>
+
+    <div id="result" class="result"></div>
+    <div id="log"></div>
+  </section>
+
+  <script>
+    // ======================= ДАННЫЕ =======================
+    const ZONES = ["Голова", "Корпус", "Пояс", "Ноги"];
+    const BASE_STAT = 5;
+    const POINTS_PER_LEVEL = 2;
+    // Классы. Здоровье у каждого считается по трём числам: база, за очко Выносливости, за уровень.
+    // У воина числа те же, что были раньше: 30, 4 и 5.
+    const CLASSES = {
+      warrior: { name: "Воин", health: { base: 30, perEndurance: 4, perLevel: 5 } },
+      mage:    { name: "Маг",  health: { base: 22, perEndurance: 3, perLevel: 4 } }
+    };
+    const MANA_PER_INTELLIGENCE = 4;
+    // Заклинание мага. Урон = вилка заклинания + Интеллект. Цены и вилка примерные, настраиваются симуляцией.
+    const SPELL = { name: "Магическая стрела", cost: 4, min: 4, max: 6, crit: 5, intMult: 1.5 };
+    const BALANCE_MANA = { regen: 2 };
+    // Книга заклинаний героя хранит ключи; сами заклинания лежат здесь. Пока одно, остальные добавим позже.
+    const SPELLS = { arrow: SPELL };
+    // Броня: очки брони зоны превращаются в долю срезаемого урона по формуле броня / (броня + K).
+    // Формула не даёт 100% при любом числе очков и работает на любых уровнях; когда появятся высокие уровни, растёт K.
+    const ARMOR_K = 20;
+    const ARMOR_SLOTS = ["head", "chest", "legs", "boots"]; // порядок совпадает с ZONES: голова, корпус, пояс, ноги
+    // Каждый следующий уровень требует примерно на 25% больше опыта: 30, 38, 47, 59, 73, 92…
+    const xpToNext = level => Math.round(30 * Math.pow(1.25, level - 1));
+
+    // Деньги хранятся одним целым числом в меди. 100 меди = 1 серебро, 100 серебра = 1 золото; показываются пересчётом.
+    const COPPER_PER_SILVER = 100;
+    const SILVER_PER_GOLD = 100;
+    function formatMoney(copper) {
+      const total = Math.max(0, Math.round(copper));
+      const gold = Math.floor(total / (COPPER_PER_SILVER * SILVER_PER_GOLD));
+      const silver = Math.floor(total / COPPER_PER_SILVER) % SILVER_PER_GOLD;
+      const cop = total % COPPER_PER_SILVER;
+      const parts = [];
+      if (gold) parts.push(`${gold}з`);
+      if (silver) parts.push(`${silver}с`);
+      if (cop || parts.length === 0) parts.push(`${cop}м`);
+      return parts.join(" ");
+    }
+    // Название выбранного пути героя: у мага это класс, у воина направление; null, если ещё не выбран.
+    const pathNameOf = c => (c.classKey === "mage" ? CLASSES.mage.name : (c.direction ? DIRECTIONS[c.direction].name : null));
+    const classOf = c => CLASSES[c.classKey] ?? CLASSES.warrior;
+    const healthPerLevel = c => classOf(c).health.perLevel;
+    const healthPerEndurance = c => classOf(c).health.perEndurance;
+    const maxHealthOf = c => { const h = classOf(c).health; return h.base + h.perEndurance * c.endurance + h.perLevel * (c.level - 1); };
+    // Мана есть только у мага; Интеллект хранится у всех, но пока ничего не даёт воину.
+    // Сопротивление магии: общий эффект Интеллекта для всех классов, считается по той же кривой, что и броня.
+    const magicResistOf = c => Math.max(0, (c.intelligence ?? BASE_STAT) - BASE_STAT);
+    const maxManaOf = c => (c.classKey === "mage" ? MANA_PER_INTELLIGENCE * (c.intelligence ?? BASE_STAT) : 0);
+
+    // Ловкость: общая характеристика для всех классов. Считаются очки сверх стартовых (BASE_STAT).
+    // Уклонение = 100 × x / (x + DODGE_K), как и броня, не доходит до 100%. Крит растёт на CRIT_PER_AGILITY процента за очко.
+    const DODGE_K = 35;
+    const CRIT_PER_AGILITY = 0.8;
+    // Направление может давать Ловкость сверх очков (agilityBonus), она влияет и на уклонение, и на крит.
+    const directionAgility = c => DIRECTIONS[c.direction]?.agilityBonus ?? 0;
+    const agilityBonus = c => Math.max(0, (c.agility ?? BASE_STAT) - BASE_STAT) + directionAgility(c);
+    const dodgeOf = c => Math.round(100 * agilityBonus(c) / (agilityBonus(c) + DODGE_K) * 10) / 10;
+    const critBonusOf = c => Math.round(agilityBonus(c) * CRIT_PER_AGILITY * 10) / 10;
+
+    // Кулаки: удар без оружия.
+    const FISTS = { dmg: [0, 1], crit: 5 };
+    // Баланс оружия: Сила прибавляется к каждому удару, поэтому два одноручных оружия получают её дважды.
+    // Двуручное делает один удар, и чтобы не проигрывать, берёт Силу с множителем.
+    const BALANCE = { twoHandStrength: 4 };
+
+    // Предметы. type: food / weapon1h (одноручное) / weapon2h (двуручное) / shield.
+    // Критический удар проходит сквозь блок. По незаблокированной зоне он бьёт в CRIT_MULTIPLIER раза сильнее,
+    // по заблокированной — как обычный удар (блок гасит усиление, но не сам удар).
+    // dmg — вилка прибавки к урону удара этой рукой [от, до], crit — шанс критического удара в процентах,
+    // blocks — сколько блоков добавляет щит. Урон удара = Сила + случайное число из вилки; критический удар бьёт вдвое сильнее.
+    const CRIT_MULTIPLIER = 2;
+    const ENEMY_CRIT = 5;
+    // price — цена покупки в меди (у трофеев вместо неё value — за сколько их покупает магазин).
+    // material: true — трофей-ингредиент: позже из таких вещей можно будет делать снаряжение.
+    const ITEMS = {
+      gladRation:   { name: "Паёк гладиатора", type: "food",   heal: 40,  price: 20,  description: "Восстанавливает 40 здоровья" },
+      bread:        { name: "Хлеб",           type: "food",     heal: 15,  price: 10,  description: "Восстанавливает 15 здоровья" },
+      knife:        { name: "Нож",            type: "weapon1h", dmg: [2, 4],   crit: 15, shape: "knife",   price: 60,   description: "Лёгкое оружие: +2…4 к урону, шанс крита 15%" },
+      sword:        { name: "Меч",            type: "weapon1h", dmg: [4, 6],   crit: 8,  shape: "sword",   price: 150,  description: "Одноручное оружие: +4…6 к урону, шанс крита 8%" },
+      axe:          { name: "Боевой топор",   type: "weapon2h", dmg: [10, 16], crit: 10, shape: "axe",     price: 300,  description: `Двуручное оружие: +10…16 к урону, шанс крита 10%, Сила в ударе ×${BALANCE.twoHandStrength}. Занимает обе руки: блок остаётся один` },
+      staff:        { name: "Посох",         type: "staff",    dmg: [3, 5],   crit: 5,  blocks: 1, shape: "staff", price: 150, description: "Посох мага: +1 блок. Без маны им можно слабо ударить" },
+      greatStaff:   { name: "Посох мудреца",  type: "staff",    dmg: [5, 7],   crit: 8,  blocks: 1, spellBonus: 3, shape: "staff", price: 700, description: "Посох мага: +1 блок и +3 к урону заклинаний" },
+      buckler:      { name: "Баклер",         type: "shield",   blocks: 1, shape: "buckler", price: 80,   description: "Малый щит: +1 блок" },
+      woodenShield: { name: "Деревянный щит", type: "shield",   blocks: 2, shape: "shield",  price: 120,  description: "Щит: +2 блока" },
+      steelSword:   { name: "Стальной меч",   type: "weapon1h", dmg: [7, 10],  crit: 10, shape: "sword",   price: 700,  description: "Одноручное оружие: +7…10 к урону, шанс крита 10%" },
+      steelKnife:   { name: "Стальной кинжал", type: "weapon1h", dmg: [4, 6],  crit: 18, shape: "knife",   price: 350,  description: "Лёгкое оружие: +4…6 к урону, шанс крита 18%" },
+      greatAxe:     { name: "Секира",         type: "weapon2h", dmg: [16, 22], crit: 12, shape: "axe",     price: 1000, description: `Двуручное оружие: +16…22 к урону, шанс крита 12%, Сила в ударе ×${BALANCE.twoHandStrength}. Занимает обе руки` },
+      dogFang:      { name: "Собачий клык",   type: "trophy",   value: 6,  material: true, description: "Трофей-материал, магазин купит за 6м" },
+      boarTusk:     { name: "Клык кабана",    type: "trophy",   value: 30, material: true, description: "Трофей-материал, магазин купит за 30м" },
+      wolfPelt:     { name: "Волчья шкура",   type: "trophy",   value: 20, material: true, description: "Трофей-материал, магазин купит за 20м" },
+      leaderFang:   { name: "Клык вожака",    type: "trophy",   value: 150, material: true, rarity: "uncommon", shape: "fang", description: "Редкий трофей-материал, магазин купит за 1с 50м" },
+      amber:        { name: "Кусок янтаря",   type: "trophy",   value: 120, rarity: "uncommon", shape: "gem", color: "#e8a93a", description: "Редкая находка, магазин купит за 1с 20м" },
+      oldRing:      { name: "Старинный перстень", type: "trophy", value: 250, rarity: "rare", shape: "gem", color: "#d9c36a", description: "Очень редкая находка, магазин купит за 2с 50м" },
+      goldNugget:   { name: "Золотой самородок", type: "trophy", value: 400, rarity: "rare", shape: "gem", color: "#f0c040", description: "Очень редкая находка, магазин купит за 4с" },
+      leatherCap:     { name: "Кожаная шапка",   type: "armor", slot: "head",  armor: 2, color: "#7a5230", price: 50,  description: "Броня головы +2" },
+      leatherJerkin:  { name: "Кожаная куртка",  type: "armor", slot: "chest", armor: 4, color: "#7a5230", price: 120, description: "Броня корпуса +4" },
+      leatherPants:   { name: "Кожаные штаны",   type: "armor", slot: "legs",  armor: 2, color: "#7a5230", price: 70,  description: "Броня пояса +2" },
+      leatherBoots:   { name: "Кожаные сапоги",  type: "armor", slot: "boots", armor: 2, color: "#5a3d1e", price: 70,  description: "Броня ног +2" },
+      ironHelm:       { name: "Железный шлем",   type: "armor", slot: "head",  armor: 4, color: "#8a93a3", price: 350, description: "Броня головы +4" },
+      chainmail:      { name: "Кольчуга",        type: "armor", slot: "chest", armor: 8, color: "#8a93a3", price: 800, description: "Броня корпуса +8" },
+      ironGreaves:    { name: "Железные поножи", type: "armor", slot: "legs",  armor: 4, color: "#8a93a3", price: 400, description: "Броня пояса +4" },
+      ironBoots:      { name: "Железные сапоги", type: "armor", slot: "boots", armor: 4, color: "#6f7889", price: 350, description: "Броня ног +4" }
+    };
+
+    // Ассортимент магазина по уровню героя: базовые вещи на уровень. Лучшее снаряжение здесь не продаётся:
+    // его будут давать призы арены, подземелья и ремесло.
+    const SHOP_STOCK = [
+      { minLevel: 1, items: ["bread", "knife", "sword", "axe", "staff", "buckler", "woodenShield", "leatherCap", "leatherJerkin", "leatherPants", "leatherBoots"] },
+      { minLevel: 5, items: ["steelKnife", "steelSword", "greatAxe", "greatStaff", "ironHelm", "chainmail", "ironGreaves", "ironBoots"] }
+    ];
+    const SELL_RATE = 0.4; // магазин покупает снаряжение за 40% цены
+
+    // Места для снаряжения. Работают руки и броня четырёх зон (шлем — голова, доспех — корпус, штаны — пояс, сапоги — ноги).
+    // Амулет и кольца заложены заранее.
+    const SLOTS = [
+      { key: "mainHand", name: "Основная рука", active: true },
+      { key: "offHand",  name: "Вторая рука",   active: true },
+      { key: "head",     name: "Шлем (голова)",   active: true },
+      { key: "chest",    name: "Доспех (корпус)", active: true },
+      { key: "legs",     name: "Штаны (пояс)",    active: true },
+      { key: "boots",    name: "Сапоги (ноги)",   active: true },
+      { key: "amulet",   name: "Амулет",        active: false },
+      { key: "ring1",    name: "Кольцо 1",      active: false },
+      { key: "ring2",    name: "Кольцо 2",      active: false }
+    ];
+
+    // Готовые наборы: для противников и для тренировочного боя.
+    const PRESETS = {
+      none:         { label: "Без снаряжения",   equipment: {} },
+      weapon:       { label: "Одно оружие",      equipment: { mainHand: "sword" } },
+      weaponShield: { label: "Оружие и щит",     equipment: { mainHand: "sword", offHand: "woodenShield" } },
+      twoWeapons:   { label: "Два оружия",       equipment: { mainHand: "sword", offHand: "sword" } },
+      shield:       { label: "Щит без оружия (допущение)", equipment: { offHand: "woodenShield" } },
+      twoHanded:    { label: "Двуручный топор",  equipment: { mainHand: "axe" } },
+      armored:      { label: "Меч, щит и кожаная броня", equipment: { mainHand: "sword", offHand: "woodenShield", head: "leatherCap", chest: "leatherJerkin", legs: "leatherPants", boots: "leatherBoots" } }
+    };
+
+    // Направления воина. Выбираются у учителя в столице. Бонусы пока простые: позже направления получат свои умения.
+    // armorBonus прибавляется к броне каждой зоны, damageBonus — к урону каждого удара.
+    const DIRECTIONS = {
+      tank:    { name: "Воин-танк",    armorBonus: 3, damageBonus: 0,
+                 description: "+3 брони на каждую зону тела. Держит удары: ему подходят щит и тяжёлая броня." },
+      damager: { name: "Воин-дамагер", armorBonus: 0, damageBonus: 3,
+                 description: "+3 к урону каждого удара. Бьёт сильно: ему подходят два клинка (два удара за ход)." },
+      evader:  { name: "Воин-уворот",  armorBonus: 0, damageBonus: 0, agilityBonus: 3,
+                 description: "+3 к Ловкости: чаще уклоняется и чаще бьёт критом. Ему подходят лёгкое оружие и подвижный бой." }
+    };
+
+    // Здания на площади столицы. ready: false — здание ещё строится, в него нельзя зайти.
+    const BUILDINGS = [
+      { key: "arena",   name: "Арена",          icon: "arena",   description: "Бои за опыт, деньги и ранг", ready: true },
+      { key: "teacher", name: "Учитель воинов", icon: "teacher", description: "Выбор направления воина", ready: true },
+      { key: "shop",    name: "Магазин",        icon: "shop",    description: "Снаряжение и трофеи: покупка и продажа", ready: true },
+      { key: "tavern",  name: "Таверна",        icon: "tavern",  description: "Мгновенный отдых за деньги", ready: true },
+      { key: "gate",    name: "Городские ворота", icon: "gate", description: "Вылазка за стены: лес, добыча, открытия", ready: true }
+    ];
+
+    // ----- Иконки -----
+    // Простые векторные значки в сетке 24×24, нарисованные линиями; цвет берут из текущего цвета текста (currentColor),
+    // поэтому один и тот же значок можно красить стилем. Новый значок — одна строка в этой таблице.
+    const ICONS = {
+      sword:   '<path d="M21 3l-.8 4.7L11 17l-4-4 9.3-9.2z" fill="currentColor" fill-opacity=".22"/><path d="M6.5 13.5l4 4M8.6 15.4L4.5 19.5"/><circle cx="3.7" cy="20.3" r="1"/>',
+      knife:   '<path d="M20.5 3.5l-9.5 12-3-3z" fill="currentColor" fill-opacity=".22"/><path d="M7 16.5l3-3M8.8 14.7L4 19.5"/><circle cx="3.5" cy="20.5" r="1"/>',
+      gate:    '<path d="M4.5 21V10a7.5 7.5 0 0 1 15 0v11"/><path d="M9 21v-6a3 3 0 0 1 6 0v6" fill="currentColor" fill-opacity=".22"/>',
+      gem:     '<path d="M12 3l7 6-7 12L5 9z" fill="currentColor" fill-opacity=".22"/><path d="M5 9h14M9.5 9L12 3l2.5 6M9.5 9L12 21l2.5-12"/>',
+      tree:    '<path d="M12 3l6 8h-3l4 6H5l4-6H6z" fill="currentColor" fill-opacity=".22"/><path d="M12 17v4"/>',
+      staff:   '<path d="M6.5 21.5L16 9"/><circle cx="17.5" cy="6.5" r="3" fill="currentColor" fill-opacity=".22"/>',
+      axe:     '<path d="M5.5 20.5L17 8"/><path d="M10.5 6C13.5 2.5 19.5 3.5 21 8.5L15.5 12z" fill="currentColor" fill-opacity=".22"/>',
+      shield:  '<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z" fill="currentColor" fill-opacity=".22"/><path d="M12 3v18M4 10h16"/>',
+      buckler: '<circle cx="12" cy="12" r="8.5" fill="currentColor" fill-opacity=".22"/><circle cx="12" cy="12" r="3"/><path d="M12 3.5V6M12 18v2.5M3.5 12H6M18 12h2.5"/>',
+      cap:     '<path d="M4.5 15a7.5 7.5 0 0 1 15 0z" fill="currentColor" fill-opacity=".22"/><path d="M3 15h18M12 7.5V4"/>',
+      helm:    '<path d="M5 20v-8a7 7 0 0 1 14 0v8z" fill="currentColor" fill-opacity=".22"/><path d="M5 13h14M12 5v8M9 17h6"/>',
+      armor:   '<path d="M8 3L3 7l3 4 2-1v11h8V10l2 1 3-4-5-4c-1 2-5 2-6 0z" fill="currentColor" fill-opacity=".22"/>',
+      pants:   '<path d="M7 3h10l1 18h-4.2L12 11l-1.8 10H6z" fill="currentColor" fill-opacity=".22"/><path d="M7 7h10"/>',
+      boots:   '<path d="M9 3h6v9.5l5 2.5v5H5v-4.5l4-2z" fill="currentColor" fill-opacity=".22"/><path d="M5 17.5h15"/>',
+      bread:   '<path d="M3.5 14c0-4 4-7 8.5-7s8.5 3 8.5 7c0 2-1.5 3.5-3.5 3.5H7c-2 0-3.5-1.5-3.5-3.5z" fill="currentColor" fill-opacity=".22"/><path d="M9 10.5l1.2 3M13 9.5l1.2 3.5M17 11l.8 2.5"/>',
+      fang:    '<path d="M7 4h10c0 6-2 11-5 17-3-6-5-11-5-17z" fill="currentColor" fill-opacity=".22"/>',
+      pelt:    '<path d="M5 5l4-2 3 2 3-2 4 2-2.5 5 2.5 6-5 4-2-3-2 3-5-4 2.5-6z" fill="currentColor" fill-opacity=".22"/>',
+      coin:    '<circle cx="12" cy="12" r="8.5" fill="currentColor" fill-opacity=".22"/><circle cx="12" cy="12" r="5"/><path d="M12 9.5v5M10 11h3.5M10 13h3.5"/>',
+      ticket:  '<path d="M3 8h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z" fill="currentColor" fill-opacity=".22"/><path d="M14 9v9" stroke-dasharray="1.5 2"/>',
+      token:   '<circle cx="12" cy="9" r="6" fill="currentColor" fill-opacity=".22"/><path d="M9 14l-2 7 5-3 5 3-2-7M12 6.5l1 2 2 .3-1.5 1.5.4 2.2-1.9-1-1.9 1 .4-2.2L9 8.8l2-.3z"/>',
+      heart:   '<path d="M12 20s-8-5-8-11a4.5 4.5 0 0 1 8-2.5A4.5 4.5 0 0 1 20 9c0 6-8 11-8 11z" fill="currentColor" fill-opacity=".22"/>',
+      star:    '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="currentColor" fill-opacity=".22"/>',
+      dumbbell:'<path d="M3 10v4M6 8v8M18 8v8M21 10v4M6 12h12"/>',
+      feather: '<path d="M20 4C10 4 5 9 5 17c0 1 0 2 .2 3 .8-.2 1.8-.3 2.8-.3 6 0 12-4 12-15.7z" fill="currentColor" fill-opacity=".22"/><path d="M5 20l8-9"/>',
+      level:   '<path d="M6 11l6-6 6 6M6 18l6-6 6 6"/>',
+      arena:   '<path d="M20 3l-.6 3.6L12 14l-3-3 7.4-7.4z" fill="currentColor" fill-opacity=".22"/><path d="M4 3l.6 3.6L12 14l3-3L7.6 3.6z" fill="currentColor" fill-opacity=".22"/><path d="M8.5 15.5l-3 3M15.5 15.5l3 3M3.5 20.5l2-2M20.5 20.5l-2-2"/>',
+      shop:    '<path d="M5 8h14l1 12H4z" fill="currentColor" fill-opacity=".22"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+      tavern:  '<path d="M5 8h11v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity=".22"/><path d="M16 10.5h1.5a2 2 0 0 1 0 5H16M5 8c0-2.5 3-3 4-1 1-2 4-2 5 0 .8-.8 2-.8 2 1"/>',
+      teacher: '<path d="M12 6c-2-1.5-5-2-8-2v14c3 0 6 .5 8 2 2-1.5 5-2 8-2V4c-3 0-6 .5-8 2z" fill="currentColor" fill-opacity=".22"/><path d="M12 6v14"/>',
+      crown:   '<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z" fill="currentColor" fill-opacity=".22"/>',
+      lock:    '<path d="M6 11h12v9H6z" fill="currentColor" fill-opacity=".22"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+      bed:     '<path d="M3 18V7M3 14h18v4M21 14v-2a3 3 0 0 0-3-3h-7v5" /><circle cx="7" cy="11" r="1.8"/>',
+      flask:   '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3" fill="currentColor" fill-opacity=".22"/>',
+      fist:    '<path d="M7 11V8a1.5 1.5 0 0 1 3 0V7a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v1a1.5 1.5 0 0 1 3 0v5c0 4-3 7-6.5 7S6 18 6 14v-3z" fill="currentColor" fill-opacity=".22"/>',
+      bag:     '<path d="M5 9h14l-1 11H6z" fill="currentColor" fill-opacity=".22"/><path d="M9 9a3 3 0 0 1 6 0M9 13h6"/>'
+    };
+
+    // Значок как элемент страницы; size — размер в пикселях.
+    function icon(name, size) {
+      const wrap = document.createElement("span");
+      wrap.className = "ico";
+      if (size) { wrap.style.width = `${size}px`; wrap.style.height = `${size}px`; }
+      wrap.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] ?? ""}</svg>`;
+      return wrap;
+    }
+
+    // Какой значок у предмета: трофеи, еда и оружие по виду, броня по месту.
+    function itemIconName(key) {
+      const item = ITEMS[key];
+      if (key === "dogFang") return "fang";
+      if (key === "wolfPelt") return "pelt";
+      if (item.type === "food") return "bread";
+      if (item.type === "armor") {
+        if (item.slot === "head") return key === "ironHelm" ? "helm" : "cap";
+        return { chest: "armor", legs: "pants", boots: "boots" }[item.slot];
+      }
+      return item.shape ?? "bag";
+    }
+
+    // ----- Общие элементы карточек -----
+    // Плашка-«чип»: короткое значение с цветом и значком.
+    function chip(text, cls, iconName) {
+      const c = document.createElement("span");
+      c.className = `chip${cls ? " " + cls : ""}`;
+      if (iconName) c.appendChild(icon(iconName, 16));
+      c.appendChild(document.createTextNode(text));
+      return c;
+    }
+
+    function chipRow(chips) {
+      const row = document.createElement("div");
+      row.className = "chiprow";
+      chips.forEach(c => row.appendChild(c));
+      return row;
+    }
+
+    // Значок предмета: цвет берётся у самого предмета (у брони он есть), иначе по виду.
+    function itemIcon(key, size) {
+      const ic = icon(itemIconName(key), size);
+      const item = ITEMS[key];
+      ic.style.color = item.color ?? (item.type === "food" ? "#e0b070" : item.type === "trophy" ? "#c9a27e" : "#d7dbe6");
+      return ic;
+    }
+
+    // Общая карточка: значок и название, пояснение, чипы, кнопки. o: { icon, iconEl, title, sub, chips, buttons, cls }
+    function infoCard(o) {
+      const card = document.createElement("div");
+      card.className = `card ${o.cls ?? ""}`;
+      const top = document.createElement("div");
+      top.className = "card-top";
+      const ic = o.iconEl ?? (o.icon ? icon(o.icon, o.iconSize ?? 22) : null);
+      if (ic) top.appendChild(ic);
+      const name = document.createElement("div");
+      name.className = "name";
+      name.textContent = o.title;
+      top.appendChild(name);
+      card.appendChild(top);
+      if (o.sub) { const sub = document.createElement("div"); sub.className = "card-sub"; sub.textContent = o.sub; card.appendChild(sub); }
+      if (o.chips && o.chips.length) card.appendChild(chipRow(o.chips));
+      if (o.buttons && o.buttons.length) {
+        const holder = document.createElement("div");
+        holder.className = "btns";
+        o.buttons.forEach(b => holder.appendChild(b));
+        card.appendChild(holder);
+      }
+      return card;
+    }
+
+    // Строка состояния героя в виде чипов; extra — необязательные чипы вдобавок.
+    function setStatus(id, p, extra, note) {
+      const box = el(id);
+      box.replaceChildren();
+      const chips = [];
+      if (p.pendingPoints > 0) chips.push(chip(`Свободных очков: ${p.pendingPoints}`, "blue", "star"));
+      const all = chips.concat(extra ?? []);
+      if (all.length) box.appendChild(chipRow(all));
+    }
+
+    // ----- Арена -----
+    // Соперников арены создаёт генератор, поэтому арена работает на любом уровне героя.
+    // Вилка урона для уровней 1…10 взята из таблицы, подобранной симуляцией (герой того же уровня со стартовым снаряжением
+    // выигрывает примерно в 90% → 65% случаев при случайной игре); выше 10 урон растёт линейно, и это ещё не проверено.
+    // Здоровье и броня считаются из уровня по формулам в arenaEnemyDef.
+    const ARENA_DMG = [null, [7, 9], [8, 10], [8, 10], [10, 12], [12, 14], [12, 14], [12, 14], [15, 17], [15, 17], [15, 17]];
+    const ARENA_NAME_FIRST = ["Грозный", "Хромой", "Седой", "Рыжий", "Мрачный", "Быстрый", "Одноглазый", "Весёлый", "Железный", "Молчаливый"];
+    const ARENA_NAME_SECOND = ["Бран", "Горт", "Рольф", "Ксанд", "Мирон", "Торвальд", "Дейн", "Освальд", "Харт", "Вальд"];
+
+    // Характеристики бойца арены заданного уровня (без имени).
+    function arenaFighterStats(level) {
+      const L = Math.max(1, Math.round(level));
+      let dmg;
+      if (L <= 10) dmg = ARENA_DMG[L];
+      else { const mid = Math.round(16 + 0.9 * (L - 10)); dmg = [mid - 1, mid + 1]; }
+      const gear = (L === 5 || L === 8 || (L > 10 && L % 3 === 2)) ? "weaponShield" : "twoWeapons";
+      return { level: L, gear, dmg };
+    }
+
+    function generateFighter(level) {
+      const pick = list => list[Math.floor(Math.random() * list.length)];
+      return { name: `${pick(ARENA_NAME_FIRST)} ${pick(ARENA_NAME_SECOND)}`, ...arenaFighterStats(level) };
+    }
+
+    // Категории соперников: уровень соперника = уровень героя + случайное число от min до max; cost — билетов за бой за ранг.
+    // Верхняя граница выбрана по симуляции: с соперником на +6 уровней герой выигрывает лишь в 10–35% боёв. Нижняя граница
+    // категорий не уходит глубоко вниз, потому что слишком слабый соперник почти ничего не даёт. Числа примерные.
+    const ARENA_CATEGORIES = [
+      { name: "Ровня",     min: 0,  max: 0, cost: 1 },
+      { name: "Испытание", min: -2, max: 3, cost: 2 },
+      { name: "Вызов",     min: 2,  max: 6, cost: 3 }
+    ];
+    // Ранги арены. categories — сколько категорий открыто для боёв за ранг (обычные бои открыты во всех категориях);
+    // need — очков для боя за повышение; boss — имя стража ранга. Все числа примерные, их нужно балансировать.
+    const ARENA_RANKS = [
+      { name: "Новичок", categories: 1, need: 20,   boss: "Привратник арены" },
+      { name: "Боец",    categories: 2, need: 35,   boss: "Страж среднего круга" },
+      { name: "Ветеран", categories: 3, need: 50,   boss: "Страж высшего круга" },
+      { name: "Чемпион", categories: 3, need: null, boss: null }
+    ];
+    const BOSS_LEVELS_ABOVE = 2;      // страж ранга сильнее героя на столько уровней
+    const RATED_XP_SHARE = 0.25;      // доля опыта в бою за ранг по сравнению с обычным боем
+    const PROMOTION_TOKENS = 5;       // жетоны за новый ранг
+    // Билеты арены: бой за ранг тратит билеты, они сами возвращаются по одному раз в TICKET_MINUTES минут реального времени
+    // (по отметке времени, поэтому и пока игра закрыта).
+    const TICKET_MAX = 10;
+    const TICKET_MINUTES = 6;
+    const TICKET_MS = TICKET_MINUTES * 60 * 1000;
+    // Награда в бою за ранг по разнице уровней (боец минус герой), на один билет; для категории умножается на её цену.
+    const RATED_POINTS = [[-3, 1], [0, 3], [2, 5], [4, 7], [6, 9]];
+    const RATED_TOKENS = [[-3, 0], [-2, 1], [0, 2], [2, 3], [4, 4], [6, 5]];
+    // Звания для лавки жетонов: rank — минимальный ранг, нужный для покупки.
+    const ARENA_TITLES = [
+      { key: "gladiator", name: "Гладиатор",       rank: 1, cost: 10 },
+      { key: "veteran",   name: "Ветеран арены",   rank: 2, cost: 25 },
+      { key: "champion",  name: "Чемпион арены",   rank: 3, cost: 50 }
+    ];
+    const ARENA_GOODS = [ { item: "gladRation", cost: 3 } ];
+
+    const newArenaState = () => ({ rank: 0, points: 0, tokens: 0, tickets: TICKET_MAX, ticketAt: Date.now(), offers: [null, null, null], titles: [], title: null });
+
+    // Линейная интерполяция по таблице точек [x, y]; за краями таблицы значение не растёт.
+    function interp(table, x) {
+      if (x <= table[0][0]) return table[0][1];
+      const last = table[table.length - 1];
+      if (x >= last[0]) return last[1];
+      for (let i = 1; i < table.length; i++) {
+        if (x <= table[i][0]) {
+          const lo = table[i - 1], hi = table[i];
+          return lo[1] + (hi[1] - lo[1]) * (x - lo[0]) / (hi[0] - lo[0]);
+        }
+      }
+    }
+
+    function ratedRewards(heroLevel, enemyLevel, cat) {
+      const diff = enemyLevel - heroLevel;
+      return { points: Math.round(interp(RATED_POINTS, diff) * cat.cost), tokens: Math.round(interp(RATED_TOKENS, diff) * cat.cost) };
+    }
+
+    // Возврат билетов: считаем, сколько целых периодов прошло, остаток времени не теряем.
+    function syncTickets(a) {
+      const now = Date.now();
+      if (a.tickets >= TICKET_MAX) { a.tickets = TICKET_MAX; a.ticketAt = now; return; }
+      if (!Number.isFinite(a.ticketAt) || a.ticketAt > now) { a.ticketAt = now; return; }
+      const gain = Math.floor((now - a.ticketAt) / TICKET_MS);
+      if (gain <= 0) return;
+      a.tickets = Math.min(TICKET_MAX, a.tickets + gain);
+      a.ticketAt = a.tickets >= TICKET_MAX ? now : a.ticketAt + gain * TICKET_MS;
+    }
+
+    function ticketText(a) {
+      if (a.tickets >= TICKET_MAX) return `Билеты: ${a.tickets} / ${TICKET_MAX}.`;
+      const minutes = Math.max(1, Math.ceil((TICKET_MS - (Date.now() - a.ticketAt)) / 60000));
+      return `Билеты: ${a.tickets} / ${TICKET_MAX}, следующий примерно через ${minutes} мин.`;
+    }
+
+    // Соперники в предложении создаются под уровень героя; при росте уровня или после боя предложение обновляется.
+    function ensureOffers(p) {
+      ARENA_CATEGORIES.forEach((cat, i) => {
+        const o = p.arena.offers[i];
+        if (!o || o.baseLevel !== p.level) {
+          p.arena.offers[i] = { ...generateFighter(p.level + randInt(cat.min, cat.max)), baseLevel: p.level };
+        }
+      });
+    }
+
+    // Награда зависит от разницы уровней (соперник минус герой). Точки таблицы: [разница, множитель опыта, множитель денег];
+    // между точками значения считаются линейно. Все числа примерные, их нужно балансировать.
+    const REWARD_POINTS = [
+      [-8, 0, 0], [-6, 0.15, 0.1], [-4, 0.4, 0.3], [-2, 0.7, 0.6], [0, 1, 1], [2, 1.2, 1.2], [5, 2, 1.5], [8, 2.6, 1.8]
+    ];
+    // Доля уровня, которую даёт бой при равных уровнях, падает с ростом уровня: на высоких уровнях нужно больше боёв.
+    const arenaBaseXp = level => Math.round(xpToNext(level) * Math.max(0.1, 0.3 - 0.02 * (level - 1)));
+    const arenaBaseMoney = level => 30 + 10 * level; // в меди
+
+    function rewardMultipliers(diff) {
+      const first = REWARD_POINTS[0];
+      const last = REWARD_POINTS[REWARD_POINTS.length - 1];
+      if (diff <= first[0]) return { xp: first[1], money: first[2] };
+      if (diff >= last[0]) return { xp: last[1], money: last[2] };
+      for (let i = 1; i < REWARD_POINTS.length; i++) {
+        const a = REWARD_POINTS[i - 1];
+        const b = REWARD_POINTS[i];
+        if (diff <= b[0]) {
+          const t = (diff - a[0]) / (b[0] - a[0]);
+          return { xp: a[1] + (b[1] - a[1]) * t, money: a[2] + (b[2] - a[2]) * t };
+        }
+      }
+    }
+
+    // Базовая награда считается от уровня героя: при равных уровнях награда ровно базовая.
+    function arenaRewards(heroLevel, enemyLevel) {
+      const m = rewardMultipliers(enemyLevel - heroLevel);
+      return { xp: Math.round(arenaBaseXp(heroLevel) * m.xp), copper: Math.round(arenaBaseMoney(heroLevel) * m.money) };
+    }
+
+    function arenaEnemyDef(f) {
+      const L = f.level;
+      return {
+        name: f.name, health: 25 + 9 * L, dmg: f.dmg, gear: f.gear, magicResist: Math.floor(0.4 * L),
+        armor: [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)]
+      };
+    }
+
+    // Дорога из деревни в столицу. Типы этапов: story (текст и эффект), fight (бой), end (конец).
+    const JOURNEY = [
+      { type: "story", title: "Родная деревня",
+        text: "Ты вырос в маленькой деревне на краю королевства. Сегодня ты решил попытать счастья и отправиться в столицу. Мама собрала тебе в дорогу хлеб, а ещё у тебя есть крепкие кулаки.",
+        effect: { items: { bread: 2 } },
+        button: "Выйти на дорогу" },
+      { type: "fight", intro: "На дороге на тебя бросается бродячая собака.",
+        enemy: { name: "Бродячая собака", health: 20, dmg: [3, 5], gear: "none", xp: 15, loot: { dogFang: 1 } } },
+      { type: "story", title: "Ржавый меч",
+        text: "В придорожной канаве ты находишь старый ржавый меч. Он ещё годится для боя.",
+        effect: { equip: [{ item: "sword", slot: "mainHand" }] }, button: "Взять меч и идти дальше" },
+      { type: "fight", intro: "Из кустов выскакивает голодный волк.",
+        enemy: { name: "Волк", health: 25, dmg: [6, 8], gear: "none", xp: 25, loot: { wolfPelt: 1 } } },
+      { type: "story", title: "Привал у ручья",
+        text: "Ты находишь тихое место у ручья, перевязываешь раны и немного отдыхаешь.",
+        effect: { heal: 25 }, button: "Идти дальше" },
+      { type: "story", title: "Старый щит",
+        text: "У брошенной телеги лежит потрёпанный деревянный щит. Рука сама тянется к нему.",
+        effect: { equip: [{ item: "woodenShield", slot: "offHand" }] }, button: "Взять щит" },
+      { type: "story", title: "Хижина охотника",
+        text: "Дорога ведёт мимо пустой охотничьей хижины. На гвозде висят кожаная куртка и шапка. Хозяина давно нет, и ты надеваешь их. Броня не заменяет блок, но смягчает каждый удар, который прошёл: зона с бронёй получает меньше урона.",
+        effect: { equip: [{ item: "leatherJerkin" }, { item: "leatherCap" }] }, button: "Идти дальше" },
+      { type: "story", title: "Опрокинутый обоз",
+        text: "Дальше по дороге лежит опрокинутый обоз. Среди обломков ты находишь нож и тяжёлый боевой топор. Всё это легло в рюкзак. Загляни в «Герой и рюкзак»: можно сменить снаряжение. Нож во вторую руку даст второй удар вместо щита. Топор бьёт гораздо сильнее, но он двуручный: щит с ним не носится, и блок остаётся один. Если выбор не подошёл, снаряжение можно сменить и после поражения.",
+        effect: { items: { knife: 1, axe: 1 } }, button: "Идти дальше" },
+      { type: "fight", intro: "Дорогу преграждает разбойник с дубиной.",
+        enemy: { name: "Разбойник", health: 40, dmg: [7, 9], gear: "weapon", armor: [0, 1, 1, 0], xp: 35, copper: 60 } },
+      { type: "story", title: "Ночлег",
+        text: "Ты находишь заброшенный сарай и проводишь в нём ночь. В сене лежат кожаные штаны и сапоги, почти новые. Ты берёшь их.",
+        effect: { heal: 30, equip: [{ item: "leatherPants" }, { item: "leatherBoots" }] }, button: "Идти дальше" },
+      { type: "fight", intro: "На последнем перегоне перед столицей выходит главарь шайки с двумя клинками.",
+        enemy: { name: "Главарь разбойников", health: 55, dmg: [8, 10], gear: "twoWeapons", armor: [2, 4, 2, 1], xp: 60, copper: 200 } },
+      { type: "end", title: "Столица",
+        text: "Впереди показались стены столицы. Ты дошёл. Здесь закончилась дорога обучения, а дальше начнётся настоящая жизнь. Привратник пускает тебя в город, и ты отсыпаешься на постоялом дворе.",
+        effect: { heal: 999 },
+        button: "Войти в столицу" }
+    ];
+
+    // ======================= СНАРЯЖЕНИЕ И ХАРАКТЕРИСТИКИ (не знает про экран) =======================
+    function fullEquipment(partial) {
+      const eq = {};
+      SLOTS.forEach(s => { eq[s.key] = null; });
+      return Object.assign(eq, partial);
+    }
+
+    // Из надетого считаем число ударов и блоков, бонусы урона и названия. Всё остальное опирается на этот результат.
+    function gearFromEquipment(eq, label) {
+      const main = eq.mainHand ? ITEMS[eq.mainHand] : null;
+      const off = eq.offHand ? ITEMS[eq.offHand] : null;
+      const offIsWeapon = off !== null && off.type === "weapon1h";
+      const offIsShield = off !== null && off.type === "shield";
+
+      const strikes = 1 + (offIsWeapon ? 1 : 0);
+      const blocks = 1 + (offIsWeapon ? 1 : 0) + (offIsShield ? off.blocks : 0) + (main && main.type === "staff" ? main.blocks : 0);
+      // Первый удар делается основной рукой, второй (если есть) — второй рукой.
+      const asHit = w => ({ min: w.dmg[0], max: w.dmg[1], crit: w.crit, strMult: w.type === "weapon2h" ? BALANCE.twoHandStrength : 1 });
+      const hits = [asHit(main ?? FISTS)];
+      if (offIsWeapon) hits.push(asHit(off));
+
+      const names = [main?.name, off?.name].filter(Boolean);
+      const armor = ARMOR_SLOTS.map(slot => (eq[slot] ? ITEMS[eq[slot]].armor : 0));
+      const armorPieces = [];
+      ARMOR_SLOTS.forEach((slot, zone) => { if (eq[slot]) armorPieces.push({ zone, color: ITEMS[eq[slot]].color }); });
+      return {
+        name: label ?? (names.length ? names.join(" + ") : "Без снаряжения"),
+        strikes, blocks, hits, armor, armorPieces,
+        mainShape: main ? main.shape : null,
+        offShape: off ? off.shape : null
+      };
+    }
+
+    // Всё, что считается из характеристик и надетого, пересчитывается здесь одним местом.
+    function refreshDerived(p) {
+      p.gear = gearFromEquipment(p.equipment, p.gearLabel);
+      const direction = DIRECTIONS[p.direction];
+      const damageBonus = direction ? direction.damageBonus : 0;
+      p.strikeDamages = p.gear.hits.map(h => ({ min: Math.round(p.strength * h.strMult) + damageBonus + h.min, max: Math.round(p.strength * h.strMult) + damageBonus + h.max, crit: Math.round((h.crit + critBonusOf(p)) * 10) / 10 }));
+      p.dodge = dodgeOf(p);
+      if (direction && direction.armorBonus) p.gear.armor = p.gear.armor.map(a => a + direction.armorBonus);
+      p.maxHealth = maxHealthOf(p);
+      p.maxMana = maxManaOf(p);
+      p.magicResist = magicResistOf(p);
+      const staffBonus = ITEMS[p.equipment.mainHand]?.spellBonus ?? 0;
+      p.spellDamage = p.classKey === "mage"
+        ? { min: SPELL.min + Math.round(p.intelligence * SPELL.intMult) + staffBonus, max: SPELL.max + Math.round(p.intelligence * SPELL.intMult) + staffBonus, crit: Math.round((SPELL.crit + critBonusOf(p)) * 10) / 10 }
+        : null;
+    }
+
+    function createHero(name, stats, equipment, label) {
+      const p = {
+        name, level: stats.level, strength: stats.strength, endurance: stats.endurance, agility: stats.agility ?? BASE_STAT,
+        intelligence: stats.intelligence ?? BASE_STAT, classKey: CLASSES[stats.classKey] ? stats.classKey : "warrior",
+        classChosen: false, spells: stats.classKey === "mage" ? ["arrow"] : [],
+        equipment: fullEquipment(equipment), gearLabel: label ?? null,
+        xp: 0, pendingPoints: 0, inventory: {}, direction: null, copper: 0, arena: newArenaState()
+      };
+      refreshDerived(p);
+      p.health = p.maxHealth;
+      return p;
+    }
+
+    function createEnemy(def) {
+      const preset = PRESETS[def.gear];
+      const gear = gearFromEquipment(fullEquipment(preset.equipment), preset.label);
+      if (def.armor) {
+        // Броню противника задаём числами, поэтому и рисунок строим по числам: тёмный цвет отличает её от кожаной брони героя.
+        gear.armor = def.armor;
+        gear.armorPieces = [];
+        def.armor.forEach((a, zone) => { if (a > 0) gear.armorPieces.push({ zone, color: "#4a4f5c" }); });
+      }
+      return {
+        name: def.name, gear, dodge: def.dodge ?? 0, magicResist: def.magicResist ?? 0,
+        health: def.health, maxHealth: def.health,
+        strikeDamages: gear.hits.map(() => ({ min: def.dmg[0], max: def.dmg[1], crit: def.crit ?? ENEMY_CRIT }))
+      };
+    }
+
+    const rangeText = d => (d.min === d.max ? `${d.min}` : `${d.min}–${d.max}`);
+
+    function damageText(p) {
+      return p.strikeDamages.map(rangeText).join(" и ");
+    }
+
+    function critText(p) {
+      return p.strikeDamages.map(d => `${d.crit}%`).join(" и ");
+    }
+
+    function armorCutPercent(armor) {
+      return Math.round(armor / (armor + ARMOR_K) * 100);
+    }
+
+    function armorText(gear) {
+      return ZONES.map((z, i) => `${z} ${gear.armor[i]} (−${armorCutPercent(gear.armor[i])}%)`).join(", ");
+    }
+
+    // ----- смена снаряжения -----
+    function addToInventory(p, key, count) {
+      p.inventory[key] = (p.inventory[key] ?? 0) + count;
+    }
+
+    function unequipSlot(p, slot) {
+      const key = p.equipment[slot];
+      if (!key) return;
+      p.equipment[slot] = null;
+      addToInventory(p, key, 1);
+    }
+
+    // Снять предмет. Если снимаем основную руку, а во второй лежит оружие, то оно переходит в основную:
+    // иначе получилось бы оружие во второй руке при пустой основной.
+    function unequipFromUi(p, slot) {
+      const off = p.equipment.offHand ? ITEMS[p.equipment.offHand] : null;
+      unequipSlot(p, slot);
+      if (slot === "mainHand" && off && off.type === "weapon1h") {
+        p.equipment.mainHand = p.equipment.offHand;
+        p.equipment.offHand = null;
+      }
+      refreshDerived(p);
+    }
+
+    // Маг не пользуется оружием и щитами (его сила в заклинаниях); броню носить может.
+    // Посох только для мага; оружие и щиты только не для мага.
+    const canUseItem = (p, item) => {
+      const isMage = p.classKey === "mage";
+      if (item.type === "staff") return isMage;
+      if (item.type === "weapon1h" || item.type === "weapon2h" || item.type === "shield") return !isMage;
+      return true;
+    };
+
+    // Убираем в рюкзак то, что классу не подходит (при смене класса и в старых сохранениях).
+    function enforceClassGear(p) {
+      ["mainHand", "offHand"].forEach(slot => { // оружие/щит мага и посох воина уходят в рюкзак
+        const key = p.equipment[slot];
+        if (key && !canUseItem(p, ITEMS[key])) unequipSlot(p, slot);
+      });
+    }
+
+    function equipItem(p, key, slot) {
+      const item = ITEMS[key];
+      if (!(p.inventory[key] > 0) || !canUseItem(p, item)) return;
+      p.inventory[key] -= 1;
+
+      if (item.type === "armor") {
+        // Броня всегда идёт в своё место и не трогает руки.
+        unequipSlot(p, item.slot);
+        p.equipment[item.slot] = key;
+      } else if (item.type === "weapon2h") {
+        unequipSlot(p, "mainHand");
+        unequipSlot(p, "offHand");
+        p.equipment.mainHand = key;
+      } else {
+        // Двуручное оружие занимает обе руки, поэтому при надевании щита или нового оружия сначала убираем его.
+        const main = p.equipment.mainHand ? ITEMS[p.equipment.mainHand] : null;
+        if (main && main.type === "weapon2h") unequipSlot(p, "mainHand");
+        unequipSlot(p, slot);
+        p.equipment[slot] = key;
+      }
+      refreshDerived(p);
+    }
+
+    // ======================= ЛОГИКА БОЯ (не знает про экран) =======================
+    function createGame(player, bot) {
+      player.mana = player.startMana ?? player.maxMana ?? 0; // мана в бою полная, кроме вылазки: там остаток от прошлых боёв
+      return { player, bot, turn: 0, over: false };
+    }
+
+    // Заклинание можно произнести, если оно есть у бойца и хватает маны; иначе маг бьёт обычным ударом.
+    const canCast = c => Boolean(c.spellDamage) && (c.mana ?? 0) >= SPELL.cost;
+
+    function pickRandomZones(count) {
+      const pool = ZONES.map((_, i) => i);
+      // Тасование Фишера-Йейтса: даёт равномерно случайный порядок без повторов.
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      return pool.slice(0, count);
+    }
+
+    // Удары могут повторяться в одной зоне (два удара в голову), в отличие от блоков.
+    function pickRandomStrikes(count) {
+      return Array.from({ length: count }, () => Math.floor(Math.random() * ZONES.length));
+    }
+
+    // Урон i-го удара зависит от руки, которой он сделан, поэтому каждый результат хранит свой урон.
+    function randInt(min, max) {
+      return min + Math.floor(Math.random() * (max - min + 1));
+    }
+
+    // Прошедший удар ослабляется бронёй той зоны, куда он попал; минимум всегда 1.
+    function reduceDamage(raw, armor) {
+      const cut = armor / (armor + ARMOR_K);
+      return Math.max(1, Math.round(raw * (1 - cut)));
+    }
+
+    function resolveStrikes(attacker, defender, strikeZones, blockZones, magic = false) {
+      return strikeZones.map((zone, i) => {
+        const profile = magic ? attacker.spellDamage : attacker.strikeDamages[Math.min(i, attacker.strikeDamages.length - 1)];
+        // Блок держит оружие, но не магию: заклинание всегда проходит в выбранную зону.
+        const blocked = !magic && blockZones.includes(zone);
+        // Крит и вилка считаются для каждого удара отдельно, в том числе для заблокированных: крит пробивает блок.
+        const crit = Math.random() * 100 < profile.crit;
+        const passes = !blocked || crit;
+        // Уклониться можно от любого удара, который прошёл бы, в том числе от крита сквозь блок.
+        const dodged = passes && Math.random() * 100 < (defender.dodge ?? 0);
+        const hit = passes && !dodged;
+        const throughBlock = crit && blocked;
+        const raw = randInt(profile.min, profile.max) * (crit && !blocked ? CRIT_MULTIPLIER : 1);
+        return { zone, hit, dodged, raw, crit, throughBlock, magic, damage: hit ? reduceDamage(raw, magic ? (defender.magicResist ?? 0) : defender.gear.armor[zone]) : 0 };
+      });
+    }
+
+    function totalDamage(results) {
+      return results.filter(r => r.hit).reduce((sum, r) => sum + r.damage, 0);
+    }
+
+    // Оба бойца ходят одновременно: сначала считаем оба результата, потом применяем урон.
+    function playTurn(game, playerStrikes, playerBlocks) {
+      const botStrikes = pickRandomStrikes(game.bot.gear.strikes);
+      const botBlocks = pickRandomZones(game.bot.gear.blocks);
+
+      const casting = canCast(game.player);
+      const playerResults = resolveStrikes(game.player, game.bot, playerStrikes, botBlocks, casting);
+      const botResults = resolveStrikes(game.bot, game.player, botStrikes, playerBlocks);
+
+      game.bot.health = Math.max(0, game.bot.health - totalDamage(playerResults));
+      game.player.health = Math.max(0, game.player.health - totalDamage(botResults));
+      game.turn += 1;
+      // Мана: заклинание тратит её, затем немного возвращается каждый ход.
+      if (game.player.maxMana > 0) {
+        if (casting) game.player.mana -= SPELL.cost * playerStrikes.length;
+        game.player.mana = Math.min(game.player.maxMana, game.player.mana + BALANCE_MANA.regen);
+      }
+
+      return { playerResults, botResults, botBlocks, playerBlocks, casting };
+    }
+
+    function getOutcome(game) {
+      const playerDead = game.player.health === 0;
+      const botDead = game.bot.health === 0;
+      if (playerDead && botDead) return "draw";
+      if (botDead) return "win";
+      if (playerDead) return "lose";
+      return null;
+    }
+
+    // ======================= РИСУНОК ФИГУРЫ =======================
+    // Фигура рисуется из простых фигур SVG. Каждая часть тела помечена номером зоны (data-zone),
+    // чтобы подсвечивать зоны по правилам боя, а не по координатам.
+    function itemSvg(shape, x) {
+      switch (shape) {
+        case "sword":
+          return `<rect x="${x - 2}" y="35" width="4" height="82" fill="#d7dbe6" stroke="#222"/>`
+               + `<rect x="${x - 9}" y="116" width="18" height="5" fill="#8a6a3b" stroke="#222"/>`
+               + `<rect x="${x - 2.5}" y="121" width="5" height="16" fill="#5a3d1e" stroke="#222"/>`;
+        case "knife":
+          return `<rect x="${x - 1.5}" y="82" width="3" height="35" fill="#d7dbe6" stroke="#222"/>`
+               + `<rect x="${x - 7}" y="116" width="14" height="4" fill="#8a6a3b" stroke="#222"/>`
+               + `<rect x="${x - 2}" y="120" width="4" height="12" fill="#5a3d1e" stroke="#222"/>`;
+        case "staff":
+          return `<rect x="${x - 2}" y="34" width="4" height="108" fill="#6b4a26" stroke="#222"/>`
+               + `<circle cx="${x}" cy="30" r="8" fill="#9a7bff" stroke="#222"/>`;
+        case "axe":
+          return `<rect x="${x - 2}" y="38" width="4" height="104" fill="#6b4a26" stroke="#222"/>`
+               + `<path d="M${x - 2} 40 l-17 -7 v28 l17 -7 z" fill="#c4c9d6" stroke="#222"/>`;
+        default:
+          return "";
+      }
+    }
+
+    function shieldSvg(shape) {
+      if (shape === "buckler") {
+        return `<circle cx="18" cy="98" r="13" fill="#9aa3b5" stroke="#222" stroke-width="2"/>`
+             + `<circle cx="18" cy="98" r="4" fill="#d7dbe6" stroke="#222"/>`;
+      }
+      return `<path d="M3 72 h32 v32 q0 24 -16 32 q-16 -8 -16 -32 z" fill="#8a5a2b" stroke="#222" stroke-width="2"/>`
+           + `<path d="M19 80 v46" stroke="#c9975a" stroke-width="3"/>`;
+    }
+
+    function figureSvg(gear, mirrored) {
+      const body =
+          `<circle class="z" data-zone="0" cx="60" cy="28" r="20"/>`
+        + `<rect class="z" data-zone="1" x="36" y="52" width="48" height="62" rx="9"/>`
+        + `<rect class="z" data-zone="1" x="18" y="56" width="14" height="62" rx="7"/>`
+        + `<rect class="z" data-zone="1" x="88" y="56" width="14" height="62" rx="7"/>`
+        + `<rect class="z" data-zone="2" x="38" y="117" width="44" height="30" rx="6"/>`
+        + `<rect class="z" data-zone="3" x="38" y="150" width="20" height="92" rx="8"/>`
+        + `<rect class="z" data-zone="3" x="62" y="150" width="20" height="92" rx="8"/>`;
+
+      // Броня рисуется поверх тела полупрозрачно или частично, чтобы подсветка зоны оставалась видна.
+      const armorShape = {
+        0: c => `<path d="M40 26 a20 20 0 0 1 40 0 z" fill="${c}" stroke="#222" stroke-width="2"/>`,
+        1: c => `<rect x="36" y="52" width="48" height="62" rx="9" fill="${c}" fill-opacity="0.6" stroke="#222"/>`
+              + `<rect x="36" y="104" width="48" height="6" fill="#2b2118" fill-opacity="0.8"/>`,
+        2: c => `<rect x="38" y="117" width="44" height="30" rx="6" fill="${c}" fill-opacity="0.6" stroke="#222"/>`,
+        3: c => `<rect x="38" y="214" width="20" height="28" rx="6" fill="${c}" stroke="#222"/>`
+              + `<rect x="62" y="214" width="20" height="28" rx="6" fill="${c}" stroke="#222"/>`
+      };
+      const armorSvg = gear.armorPieces.map(a => armorShape[a.zone](a.color)).join("");
+
+      const isShield = s => s === "shield" || s === "buckler";
+      let items = "";
+      if (gear.mainShape) items += itemSvg(gear.mainShape, 108);
+      if (gear.offShape) items += isShield(gear.offShape) ? shieldSvg(gear.offShape) : itemSvg(gear.offShape, 12);
+
+      // Метки с числом ударов лежат вне отражённой группы, иначе цифры отразились бы зеркально.
+      const group = mirrored ? `<g transform="translate(120 0) scale(-1 1)">` : `<g>`;
+      const labels = [34, 88, 138, 200]
+        .map((y, i) => `<text class="lbl" data-zone="${i}" x="60" y="${y}"></text>`).join("");
+
+      return `<svg viewBox="0 0 120 250" xmlns="http://www.w3.org/2000/svg">${group}${body}${armorSvg}${items}</g>${labels}</svg>`;
+    }
+
+    // ======================= ЭКРАН: бой =======================
+    let game = null;
+    const selectedStrikes = [];
+    const selectedBlocks = new Set();
+
+    const el = id => document.getElementById(id);
+
+    function showScreen(id) {
+      ["menu", "training-setup", "story", "capital", "arena", "arenashop", "tavern", "shop", "teacher", "hero", "levelup", "battle", "expedition"].forEach(s => { el(s).hidden = (s !== id); });
+      currentScreen = id;
+      if (id === "menu") refreshMenu();
+      updateHud();
+    }
+
+    // Постоянная панель здоровья: видна на всех экранах города, кроме героя (у него свои шкалы).
+    let currentScreen = "menu";
+    const HUD_SCREENS = ["capital", "arena", "arenashop", "tavern", "shop", "teacher", "levelup", "expedition"];
+
+    function regenClock(p) {
+      if (p.health >= p.maxHealth) return "";
+      if (!journey || journey.phase !== "capital" || journey.expedition) return "";
+      const perHpMs = REGEN_SECONDS_FULL * 1000 / p.maxHealth;
+      const doneMs = Number.isFinite(p.regenAt) ? Math.max(0, Math.min(perHpMs, Date.now() - p.regenAt)) : 0; // уже накопленная часть текущего очка здоровья
+      const sec = Math.max(1, Math.ceil(((p.maxHealth - p.health) * perHpMs - doneMs) / 1000));
+      return `полное через ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+    }
+
+    function updateHud() {
+      const hud = el("hud");
+      const p = journey?.player;
+      if (!p || !HUD_SCREENS.includes(currentScreen)) { hud.hidden = true; return; }
+      hud.hidden = false;
+      hud.replaceChildren();
+      const hp = document.createElement("div");
+      hp.className = "hud-hp";
+      const top = document.createElement("div");
+      top.className = "hud-hp-top";
+      top.append(icon("heart", 16), document.createTextNode(`${p.health} / ${p.maxHealth}`));
+      const clock = regenClock(p);
+      if (clock) { const r = document.createElement("span"); r.className = "hud-regen"; r.textContent = clock; top.appendChild(r); }
+      const bar = document.createElement("div");
+      bar.className = "bar";
+      bar.innerHTML = `<div class="fill" style="width:${barPercent(p.health, p.maxHealth)}"></div>`;
+      hp.append(top, bar);
+      if (p.maxMana > 0) {
+        const mtop = document.createElement("div");
+        mtop.className = "hud-hp-top hud-mana-top";
+        mtop.append(icon("flask", 16), document.createTextNode(`${journey.expedition ? journey.expedition.mana : p.maxMana} / ${p.maxMana}`));
+        const mbar = document.createElement("div");
+        mbar.className = "bar";
+        mbar.innerHTML = `<div class="fill manafill" style="width:${barPercent(journey.expedition ? journey.expedition.mana : p.maxMana, p.maxMana)}"></div>`;
+        hp.append(mtop, mbar);
+      }
+      hud.append(hp, chip(`ур. ${p.level}`, "gold", "level"), chip(formatMoney(p.copper), "gold", "coin"));
+    }
+
+    // Раз в секунду: здоровье подрастает само, панель и экран героя показывают это без перехода между экранами.
+    setInterval(() => {
+      const p = journey?.player;
+      if (!p || journey.phase !== "capital" || !(HUD_SCREENS.includes(currentScreen) || currentScreen === "hero")) return; // в бою здоровье не восстанавливается
+      const before = p.health;
+      syncRegen(p);
+      if (p.health !== before) saveGame("capital");
+      if (currentScreen === "hero") {
+        el("hero-hp").textContent = `${p.health} / ${p.maxHealth}${regenClock(p) ? " · " + regenClock(p) : ""}`;
+        el("hero-hp-bar").style.width = barPercent(p.health, p.maxHealth);
+      } else updateHud();
+    }, 1000);
+
+    function fillPresetSelect(select, defaultKey) {
+      for (const key in PRESETS) {
+        const option = document.createElement("option");
+        option.value = key;
+        option.textContent = PRESETS[key].label;
+        select.appendChild(option);
+      }
+      select.value = defaultKey;
+    }
+
+    function renderZoneButtons(container, selected, limit) {
+      container.replaceChildren();
+      ZONES.forEach((name, i) => {
+        const btn = document.createElement("button");
+        btn.textContent = name;
+        btn.className = "zone" + (selected.has(i) ? " on" : "");
+        btn.disabled = game.over;
+        btn.addEventListener("click", () => {
+          if (selected.has(i)) selected.delete(i);
+          else if (selected.size < limit) selected.add(i);
+          refreshSelection();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function renderStrikeButtons(limit) {
+      const container = el("strike-zones");
+      container.replaceChildren();
+      ZONES.forEach((name, i) => {
+        const count = selectedStrikes.filter(z => z === i).length;
+        const btn = document.createElement("button");
+        btn.textContent = count > 0 ? `${name} ×${count}` : name;
+        btn.className = "zone" + (count > 0 ? " on" : "");
+        btn.disabled = game.over;
+        btn.addEventListener("click", () => {
+          if (selectedStrikes.length < limit) selectedStrikes.push(i);
+          refreshSelection();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    // Фигуры строятся один раз за бой, а тут меняются только классы: так не пропадает мигание после хода.
+    function updateFigureMarks() {
+      document.querySelectorAll("#bot-figure .z").forEach(s =>
+        s.classList.toggle("target", selectedStrikes.includes(+s.dataset.zone)));
+      document.querySelectorAll("#player-figure .z").forEach(s =>
+        s.classList.toggle("guard", selectedBlocks.has(+s.dataset.zone)));
+      document.querySelectorAll("#bot-figure .lbl").forEach(t => {
+        const n = selectedStrikes.filter(z => z === +t.dataset.zone).length;
+        t.textContent = n ? `×${n}` : "";
+      });
+    }
+
+    function flashZones(figureId, zones, cssClass) {
+      const shapes = [...document.querySelectorAll(`#${figureId} .z`)]
+        .filter(s => zones.includes(+s.dataset.zone));
+      shapes.forEach(s => s.classList.add(cssClass));
+      setTimeout(() => shapes.forEach(s => s.classList.remove(cssClass)), 800);
+    }
+
+    function refreshSelection() {
+      const strikeLimit = game.player.gear.strikes;
+      const blockLimit = game.player.gear.blocks;
+      const damages = game.player.strikeDamages;
+      const damageInfo = damages.length > 1
+        ? `урон: 1-й удар ${rangeText(damages[0])}, 2-й удар ${rangeText(damages[1])}`
+        : `урон ${rangeText(damages[0])}`;
+
+      if (game.player.spellDamage) {
+        // Маг: вместо удара заклинание, пока хватает маны; потом слабый удар.
+        el("strike-title").textContent = canCast(game.player)
+          ? `Заклинание «${SPELL.name}»: выбери зону (урон ${rangeText(game.player.spellDamage)}, мана −${SPELL.cost}; блок его не держит)`
+          : `Мана кончилась: удар без заклинания, выбери зону (урон ${damageInfo.replace("урон ", "")})`;
+      } else {
+        el("strike-title").textContent = `Удары: выбрано ${selectedStrikes.length} из ${strikeLimit} (${damageInfo}; можно несколько в одну зону)`;
+      }
+      el("block-title").textContent = `Блоки: выбрано ${selectedBlocks.size} из ${blockLimit}`;
+
+      renderStrikeButtons(strikeLimit);
+      renderZoneButtons(el("block-zones"), selectedBlocks, blockLimit);
+      el("strike-reset").disabled = game.over;
+      updateFigureMarks();
+
+      el("turn-btn").disabled = game.over
+        || selectedStrikes.length !== strikeLimit
+        || selectedBlocks.size !== blockLimit;
+    }
+
+    function refreshHealth() {
+      el("player-health").textContent = game.player.health;
+      el("bot-health").textContent = game.bot.health;
+      el("player-bar").style.width = (game.player.health / game.player.maxHealth * 100) + "%";
+      el("bot-bar").style.width = (game.bot.health / game.bot.maxHealth * 100) + "%";
+      const hasMana = game.player.maxMana > 0;
+      el("player-mana-row").hidden = !hasMana;
+      if (hasMana) {
+        el("player-mana").textContent = game.player.mana;
+        el("player-mana-max").textContent = game.player.maxMana;
+        el("player-mana-bar").style.width = (game.player.mana / game.player.maxMana * 100) + "%";
+      }
+      el("player-figure").classList.toggle("dead", game.player.health === 0);
+      el("bot-figure").classList.toggle("dead", game.bot.health === 0);
+    }
+
+    function addLogLine(text, cssClass) {
+      const line = document.createElement("div");
+      line.textContent = text;
+      if (cssClass) line.className = cssClass;
+      el("log").prepend(line);
+    }
+
+    function zoneNames(zones) {
+      return zones.map(z => ZONES[z]).join(", ");
+    }
+
+    function logTurn(turnResult) {
+      // prepend ставит строки сверху, поэтому пишем в обратном порядке: новый ход окажется наверху целиком.
+      const lines = [];
+      lines.push({ text: `Ход ${game.turn}`, cls: "turn-title" });
+      lines.push({ text: `Твои блоки: ${zoneNames(turnResult.playerBlocks)}. Блоки противника: ${zoneNames(turnResult.botBlocks)}.` });
+      for (const r of turnResult.playerResults) {
+        if (r.magic) {
+          lines.push(r.hit
+            ? { text: `Ты бросаешь «${SPELL.name}» в зону «${ZONES[r.zone]}» — ${r.crit ? "★ КРИТИЧЕСКОЕ ЗАКЛИНАНИЕ! " : ""}попал (-${r.damage}${r.raw !== r.damage ? `, сопротивление погасило ${r.raw - r.damage}` : ""})`, cls: r.crit ? "crit" : "good" }
+            : { text: `Ты бросаешь «${SPELL.name}» в зону «${ZONES[r.zone]}» — ${game.bot.name} уклонился`, cls: "miss" });
+          continue;
+        }
+        lines.push(r.hit
+          ? { text: `Ты бьёшь в зону «${ZONES[r.zone]}» — ${r.crit ? (r.throughBlock ? "★ КРИТ ПРОБИЛ БЛОК (урон обычный)! " : "★ КРИТИЧЕСКИЙ УДАР! ") : ""}попал (-${r.damage}${r.raw !== r.damage ? `, броня погасила ${r.raw - r.damage}` : ""})`, cls: r.crit ? "crit" : "good" }
+          : (r.dodged
+            ? { text: `Ты бьёшь в зону «${ZONES[r.zone]}» — ${game.bot.name} уклонился`, cls: "miss" }
+            : { text: `Ты бьёшь в зону «${ZONES[r.zone]}» — заблокировано`, cls: "miss" }));
+      }
+      for (const r of turnResult.botResults) {
+        lines.push(r.hit
+          ? { text: `${game.bot.name} бьёт в зону «${ZONES[r.zone]}» — ${r.crit ? (r.throughBlock ? "★ КРИТ ПРОБИЛ БЛОК (урон обычный)! " : "★ КРИТИЧЕСКИЙ УДАР! ") : ""}попал (-${r.damage} тебе${r.raw !== r.damage ? `, броня погасила ${r.raw - r.damage}` : ""})`, cls: r.crit ? "crit" : "hit" }
+          : (r.dodged
+            ? { text: `${game.bot.name} бьёт в зону «${ZONES[r.zone]}» — ★ ТЫ УКЛОНИЛСЯ!`, cls: "dodge" }
+            : { text: `${game.bot.name} бьёт в зону «${ZONES[r.zone]}» — ты заблокировал`, cls: "miss" }));
+      }
+      lines.reverse().forEach(l => addLogLine(l.text, l.cls));
+    }
+
+    function flashTurn(turnResult) {
+      const zonesWhere = (results, wasHit) => results.filter(r => r.hit === wasHit && !r.dodged).map(r => r.zone);
+      const dodgedZones = results => results.filter(r => r.dodged).map(r => r.zone);
+      flashZones("bot-figure", zonesWhere(turnResult.playerResults, true), "flash-hit");
+      flashZones("bot-figure", zonesWhere(turnResult.playerResults, false), "flash-block");
+      flashZones("bot-figure", dodgedZones(turnResult.playerResults), "flash-dodge");
+      flashZones("player-figure", zonesWhere(turnResult.botResults, true), "flash-hit");
+      flashZones("player-figure", zonesWhere(turnResult.botResults, false), "flash-block");
+      flashZones("player-figure", dodgedZones(turnResult.botResults), "flash-dodge");
+      // Критические попадания подсвечиваются золотым поверх обычной красной вспышки.
+      const critZones = results => results.filter(r => r.hit && r.crit).map(r => r.zone);
+      flashZones("bot-figure", critZones(turnResult.playerResults), "flash-crit");
+      flashZones("player-figure", critZones(turnResult.botResults), "flash-crit");
+    }
+
+    // onFinish(outcome) решает, что показать после боя: в тренировке и в путешествии это разные кнопки.
+    let onBattleFinish = null;
+
+    function startBattle(player, bot, introText, progressText, finishHandler) {
+      game = createGame(player, bot);
+      onBattleFinish = finishHandler;
+      selectedStrikes.length = 0;
+      selectedBlocks.clear();
+      el("log").replaceChildren();
+      el("result").textContent = "";
+      el("after-btn").hidden = true;
+      el("after-hero-btn").hidden = true;
+      el("player-xp").textContent = "";
+      el("battle-intro").textContent = introText;
+      el("battle-progress").textContent = progressText;
+      el("player-name").textContent = player.name;
+      el("bot-name").textContent = bot.name;
+      el("player-max").textContent = player.maxHealth;
+      el("bot-max").textContent = bot.maxHealth;
+      const armorLine = g => (g.armor.some(a => a > 0) ? ` · броня: ${g.armor.join("/")}` : "");
+      const dodgeLine = c => (c.dodge > 0 ? ` · уклонение: ${c.dodge}%` : "");
+      el("player-gear-name").textContent = `${player.gear.name} · ` + (player.spellDamage ? `заклинание: урон ${rangeText(player.spellDamage)}, мана −${SPELL.cost}; без маны удар ${damageText(player)}` : `урон за удар: ${damageText(player)}`) + `${armorLine(player.gear)}${dodgeLine(player)}`;
+      el("bot-gear-name").textContent = `${bot.gear.name} · урон за удар: ${damageText(bot)}${armorLine(bot.gear)}${dodgeLine(bot)}`;
+      el("player-figure").innerHTML = figureSvg(player.gear, false);
+      el("bot-figure").innerHTML = figureSvg(bot.gear, true);
+      showScreen("battle");
+      refreshHealth();
+      refreshSelection();
+    }
+
+    function onTurn() {
+      const turnResult = playTurn(game, [...selectedStrikes], [...selectedBlocks]);
+      selectedStrikes.length = 0;
+      selectedBlocks.clear();
+      logTurn(turnResult);
+      refreshHealth();
+      flashTurn(turnResult);
+
+      const outcome = getOutcome(game);
+      if (outcome) {
+        game.over = true;
+        el("result").textContent = {
+          win: "Победа!",
+          lose: "Поражение.",
+          draw: "Ничья: оба упали."
+        }[outcome];
+        onBattleFinish(outcome);
+      }
+      refreshSelection();
+    }
+
+    function showAfterButton(label, handler) {
+      const btn = el("after-btn");
+      btn.textContent = label;
+      btn.onclick = handler;
+      btn.hidden = false;
+    }
+
+    // ======================= ТРЕНИРОВОЧНЫЙ БОЙ =======================
+    function startTraining() {
+      // Ловкость задаётся полями на экране тренировки; пустое или неверное значение сводим к стартовому диапазону.
+      const agilityFrom = id => Math.min(60, Math.max(BASE_STAT, Math.floor(Number(el(id).value)) || BASE_STAT));
+      const make = (name, presetKey, agility) => presetKey === "mage"
+        ? createHero(name, { level: 1, strength: BASE_STAT, endurance: BASE_STAT, agility, classKey: "mage" }, {}, "Маг")
+        : createHero(name, { level: 1, strength: BASE_STAT, endurance: BASE_STAT, agility }, PRESETS[presetKey].equipment, PRESETS[presetKey].label);
+      const player = make("Ты", el("player-gear").value, agilityFrom("player-agility"));
+      const bot = make("Бот", el("bot-gear").value, agilityFrom("bot-agility"));
+      startBattle(player, bot, "", "Тренировка", () => {
+        showAfterButton("В меню", () => showScreen("menu"));
+      });
+    }
+
+    // ======================= ПУТЕШЕСТВИЕ =======================
+    let journey = null;
+
+    // ----- Сохранение -----
+    // Игра сохраняется сама в памяти браузера: на каждой остановке, перед боем, после победы и при смене снаряжения.
+    // Сохраняется только состояние героя и номер этапа, а не экран, поэтому после загрузки этап показывается заново.
+    // applied нужен, чтобы находки этапа не выдавались второй раз: если они уже выданы, при загрузке их пропускаем.
+    // ----- Восстановление здоровья -----
+    // Здоровье в столице растёт само: полное восстановление с нуля занимает REGEN_SECONDS_FULL секунд реального времени.
+    // Считается по отметке времени p.regenAt, поэтому оно идёт и пока игра закрыта.
+    const REGEN_SECONDS_FULL = 600;
+    const TAVERN_BASE = 20, TAVERN_PER_LEVEL = 10; // цена полного отдыха в меди: база + за каждый уровень героя; при неполной потере — пропорционально
+
+    function syncRegen(p) {
+      const now = Date.now();
+      if (!journey || journey.phase !== "capital" || journey.expedition || p.health >= p.maxHealth) { p.regenAt = now; return; }
+      if (!Number.isFinite(p.regenAt) || p.regenAt > now) { p.regenAt = now; return; } // часы перевели назад — просто начинаем отсчёт заново
+      const perHpMs = REGEN_SECONDS_FULL * 1000 / p.maxHealth;
+      const gain = Math.floor((now - p.regenAt) / perHpMs);
+      if (gain <= 0) return;
+      p.health = Math.min(p.maxHealth, p.health + gain);
+      p.regenAt = p.health >= p.maxHealth ? now : p.regenAt + gain * perHpMs; // остаток времени не теряем
+    }
+
+    function regenText(p) {
+      if (p.health >= p.maxHealth) return "";
+      const minutes = Math.ceil((p.maxHealth - p.health) / p.maxHealth * REGEN_SECONDS_FULL / 60);
+      return ` Само восстановится примерно за ${minutes} мин.`;
+    }
+
+    const tavernPrice = p => Math.ceil((p.maxHealth - p.health) / p.maxHealth * (TAVERN_BASE + TAVERN_PER_LEVEL * p.level));
+
+    const SAVE_KEY = "myGameSave_v1";
+    let saveStatus = "unknown";
+
+    function storageWorks() {
+      try {
+        localStorage.setItem("myGameTest", "1");
+        localStorage.removeItem("myGameTest");
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function saveGame(mode) {
+      if (!journey) return;
+      const p = journey.player;
+      // В столице экран один, поэтому режим сохранения всегда «capital».
+      const data = {
+        version: 3, mode: journey.phase === "capital" ? "capital" : mode, phase: journey.phase,
+        index: journey.index, applied: journey.applied, levelsGained: journey.levelsGained,
+        expedition: journey.expedition ?? null, world: journey.world ?? null,
+        player: {
+          direction: p.direction, copper: p.copper, name: p.name, level: p.level, xp: p.xp, strength: p.strength, endurance: p.endurance, agility: p.agility, intelligence: p.intelligence, classKey: p.classKey, classChosen: p.classChosen, spells: p.spells, pendingPoints: p.pendingPoints, arena: p.arena, regenAt: p.regenAt,
+          equipment: p.equipment, inventory: p.inventory, health: p.health
+        }
+      };
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        saveStatus = "ok";
+      } catch (e) {
+        saveStatus = "failed";
+      }
+    }
+
+    // Старые сохранения без арены и повреждённые данные превращаем в корректное состояние, а не падаем.
+    function cleanArena(a) {
+      const base = newArenaState();
+      if (!a || typeof a !== "object") return base;
+      const num = v => (Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0);
+      base.rank = Math.min(num(a.rank), ARENA_RANKS.length - 1);
+      base.points = num(a.points);
+      base.tokens = num(a.tokens);
+      base.tickets = Number.isFinite(a.tickets) ? Math.min(TICKET_MAX, num(a.tickets)) : TICKET_MAX;
+      base.ticketAt = Number.isFinite(a.ticketAt) ? a.ticketAt : Date.now();
+      if (Array.isArray(a.offers)) {
+        base.offers = ARENA_CATEGORIES.map((_, i) => {
+          const o = a.offers[i];
+          const ok = o && typeof o.name === "string" && Number.isFinite(o.level) && PRESETS[o.gear] && Array.isArray(o.dmg) && o.dmg.length === 2 && o.dmg.every(Number.isFinite) && Number.isFinite(o.baseLevel);
+          return ok ? { name: o.name, level: o.level, gear: o.gear, dmg: [o.dmg[0], o.dmg[1]], baseLevel: o.baseLevel } : null;
+        });
+      }
+      base.titles = Array.isArray(a.titles) ? a.titles.filter(t => ARENA_TITLES.some(x => x.key === t)) : [];
+      base.title = base.titles.includes(a.title) ? a.title : null;
+      return base;
+    }
+
+    function readSave() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        if ((data.version !== 2 && data.version !== 3) || !JOURNEY[data.index] || !data.player) return null;
+        return data;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function clearSave() {
+      try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* без хранилища очищать нечего */ }
+    }
+
+    // Данные вылазки из сохранения проверяем: неизвестное место или точка не должны ломать игру.
+    function cleanExpedition(e) {
+      const loc = e && LOCATIONS[e.loc];
+      if (!loc || !loc.points[e.at]) return null;
+      const known = ids => (Array.isArray(ids) ? ids.filter(id => loc.points[id]) : []);
+      const items = {};
+      for (const k in (e.loot?.items ?? {})) if (ITEMS[k] && e.loot.items[k] > 0) items[k] = e.loot.items[k];
+      const start = Object.keys(loc.points).filter(k => loc.points[k].visible);
+      return {
+        loc: e.loc, at: e.at, mana: Number.isFinite(e.mana) ? e.mana : 0, log: typeof e.log === "string" ? e.log : "",
+        visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])],
+        loot: { copper: Number.isFinite(e.loot?.copper) ? Math.max(0, e.loot.copper) : 0, items }
+      };
+    }
+
+    function cleanWorld(w) {
+      const out = { trips: Number.isFinite(w?.trips) ? Math.max(0, Math.floor(w.trips)) : 0, opened: {} };
+      for (const k in (w?.opened ?? {})) if (Number.isFinite(w.opened[k])) out.opened[k] = w.opened[k];
+      return out;
+    }
+
+    function loadGame() {
+      const s = readSave();
+      if (!s) { refreshMenu(); return; }
+      try {
+        const sp = s.player;
+        // Неизвестные предметы (если список предметов изменился) выбрасываем, чтобы игра не сломалась.
+        const knownEquipment = {};
+        for (const slot in sp.equipment) knownEquipment[slot] = ITEMS[sp.equipment[slot]] ? sp.equipment[slot] : null;
+        const p = createHero(cleanName(sp.name), { level: sp.level, strength: sp.strength, endurance: sp.endurance, agility: Number.isFinite(sp.agility) ? sp.agility : BASE_STAT,
+          intelligence: Number.isFinite(sp.intelligence) ? sp.intelligence : BASE_STAT, classKey: sp.classKey }, knownEquipment, null);
+        p.xp = sp.xp;
+        p.pendingPoints = sp.pendingPoints;
+        p.inventory = {};
+        for (const key in sp.inventory) if (ITEMS[key]) p.inventory[key] = sp.inventory[key];
+        p.health = Math.min(sp.health, p.maxHealth);
+        p.copper = sp.copper ?? sp.gold ?? 0; // gold — поле старых сохранений
+        p.direction = DIRECTIONS[sp.direction] ? sp.direction : null;
+        p.classChosen = sp.classChosen ?? Boolean(sp.direction); // старые сохранения: выбравший направление уже выбрал и класс
+        enforceClassGear(p);
+        p.spells = Array.isArray(sp.spells) ? sp.spells.filter(k => SPELLS[k]) : (p.classKey === "mage" ? ["arrow"] : []);
+        p.arena = cleanArena(sp.arena);
+        p.regenAt = Number.isFinite(sp.regenAt) ? sp.regenAt : Date.now();
+        refreshDerived(p);
+        p.health = Math.min(sp.health, p.maxHealth);
+        journey = { index: s.index, player: p, levelsGained: s.levelsGained ?? 0, applied: Boolean(s.applied),
+                    phase: s.phase === "capital" ? "capital" : "road" };
+
+        journey.expedition = cleanExpedition(s.expedition);
+        journey.world = cleanWorld(s.world);
+        if (journey.phase === "capital" && journey.expedition) {
+          showExpedition();
+        } else if (journey.phase === "capital") {
+          showCapital();
+        } else if (s.mode === "levelup") {
+          showLevelUp();
+        } else {
+          const stop = JOURNEY[journey.index];
+          if (stop.type === "fight") runFight(stop);
+          else runStory(stop, journey.applied);
+        }
+      } catch (e) {
+        clearSave();
+        journey = null;
+        showScreen("menu");
+        el("save-info").textContent = "Сохранение оказалось повреждено и было удалено.";
+      }
+    }
+
+    let newGameArmed = false;
+
+    function onNewGameClick() {
+      if (readSave() && !newGameArmed) {
+        newGameArmed = true;
+        el("journey-btn").textContent = "Точно начать заново? Сохранение будет стёрто";
+        return;
+      }
+      newGameArmed = false;
+      clearSave();
+      startJourney();
+    }
+
+    function refreshMenu() {
+      newGameArmed = false;
+      const save = readSave();
+      el("continue-btn").hidden = !save;
+      el("journey-btn").textContent = save ? "Начать заново" : "Начать путешествие";
+      if (!storageWorks()) {
+        el("save-info").textContent = "В этом браузере сохранение недоступно: прогресс не запомнится.";
+      } else if (save) {
+        el("save-info").textContent = save.phase === "capital"
+          ? `Есть сохранение: ${save.player.name}, столица, уровень ${save.player.level}.`
+          : `Есть сохранение: этап ${save.index + 1} из ${JOURNEY.length}, уровень ${save.player.level}.`;
+      } else {
+        el("save-info").textContent = "Игра сохраняется сама.";
+      }
+    }
+
+    // Имя не пустое и не слишком длинное; пробелы по краям убираем. Выводится только через textContent, поэтому разметка в имени безопасна.
+    const DEFAULT_NAME = "Путник";
+    function cleanName(raw) {
+      const name = String(raw ?? "").trim().slice(0, 20);
+      return name || DEFAULT_NAME;
+    }
+
+    function startJourney() {
+      const player = createHero(cleanName(el("hero-name-input").value), { level: 1, strength: BASE_STAT, endurance: BASE_STAT, agility: BASE_STAT }, {}, null);
+      journey = { index: 0, player, levelsGained: 0, applied: false, phase: "road" };
+      runStop();
+    }
+
+    function progressText() {
+      return `Дорога в столицу: этап ${journey.index + 1} из ${JOURNEY.length}`;
+    }
+
+    function nextStop() {
+      journey.index += 1;
+      runStop();
+    }
+
+    function runStop() {
+      const stop = JOURNEY[journey.index];
+      if (stop.type === "fight") runFight(stop);
+      else runStory(stop);
+    }
+
+    function applyEffect(effect) {
+      const p = journey.player;
+      const messages = [];
+      if (effect?.items) {
+        for (const key in effect.items) {
+          addToInventory(p, key, effect.items[key]);
+          messages.push(`Получено: ${ITEMS[key].name} ×${effect.items[key]}`);
+        }
+      }
+      if (effect?.equip) {
+        for (const e of effect.equip) {
+          const before = damageText(p);
+          addToInventory(p, e.item, 1);
+          equipItem(p, e.item, e.slot);
+          if (ITEMS[e.item].type === "armor") {
+            const z = ARMOR_SLOTS.indexOf(ITEMS[e.item].slot);
+            messages.push(`Надето: ${ITEMS[e.item].name}. Броня зоны «${ZONES[z]}»: ${p.gear.armor[z]} (−${armorCutPercent(p.gear.armor[z])}% урона)`);
+          } else {
+            messages.push(`Надето: ${ITEMS[e.item].name}. Ударов: ${p.gear.strikes}, блоков: ${p.gear.blocks}. Урон за удар: ${before} → ${damageText(p)}`);
+          }
+        }
+      }
+      if (effect?.heal) {
+        const before = p.health;
+        p.health = Math.min(p.maxHealth, p.health + effect.heal);
+        messages.push(`Здоровье +${p.health - before}`);
+      }
+      return messages.join(". ");
+    }
+
+    function heroStatusText() {
+      const p = journey.player;
+      return `${p.name}: уровень ${p.level} (опыт ${p.xp} / ${xpToNext(p.level)}). Здоровье: ${p.health} / ${p.maxHealth}. Деньги: ${formatMoney(p.copper)}. `
+           + `Сила ${p.strength}, выносливость ${p.endurance}, ловкость ${p.agility}. Урон за удар: ${damageText(p)}. Надето: ${p.gear.name}.`;
+    }
+
+    function runStory(stop, skipEffect) {
+      const effectText = skipEffect ? "" : applyEffect(stop.effect);
+      journey.applied = true;
+      el("story-progress").textContent = progressText();
+      el("story-title").textContent = stop.title;
+      el("story-text").textContent = stop.text;
+      el("story-effect").textContent = effectText;
+      el("story-status").textContent = stop.type === "end" ? "" : heroStatusText();
+      el("story-btn").textContent = stop.button;
+      el("story-btn").onclick = stop.type === "end" ? enterCapital : nextStop;
+      saveGame("stop");
+      el("story-save-note").textContent = saveStatus === "ok"
+        ? "Игра сохранена автоматически."
+        : "Сохранение недоступно в этом браузере: прогресс не запомнится.";
+      showScreen("story");
+    }
+
+    // ----- Экран «Герой и рюкзак» -----
+    function barPercent(value, max) {
+      return Math.min(100, value / max * 100) + "%";
+    }
+
+    function makeButton(text, handler, disabled) {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.disabled = Boolean(disabled);
+      btn.addEventListener("click", handler);
+      return btn;
+    }
+
+    function makeRow(labelText, buttons, labelClass) {
+      const row = document.createElement("div");
+      row.className = "row";
+      const label = document.createElement("span");
+      label.textContent = labelText;
+      if (labelClass) label.className = labelClass;
+      const holder = document.createElement("div");
+      holder.className = "btns";
+      buttons.forEach(b => holder.appendChild(b));
+      row.append(label, holder);
+      return row;
+    }
+
+    // Экран героя длинный: после смены снаряжения показываем итог сверху и прокручиваем наверх,
+    // иначе кажется, что кнопка внизу ничего не сделала.
+    let heroMessage = "";
+    function heroAction(change, what) {
+      const p = journey.player;
+      change();
+      heroMessage = `${what}. Ударов: ${p.gear.strikes}, блоков: ${p.gear.blocks}. Урон за удар: ${damageText(p)}. Броня: ${p.gear.armor.join("/")}.`;
+      renderHero();
+      window.scrollTo(0, 0);
+    }
+
+    // Вкладка экрана героя запоминается: после надевания вещи экран не должен прыгать обратно на характеристики.
+    let heroTab = "stats";
+    const HERO_TABS = [
+      { key: "stats", name: "Характеристики" },
+      { key: "equipment", name: "Снаряжение" },
+      { key: "bag", name: "Рюкзак" }
+    ];
+
+    // Небольшая «фабрика» элементов: тег, класс, текст.
+    function mk(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    // Карточка с заголовком, большим числом и пояснением; extra — необязательные кнопки.
+    function statCard(title, big, sub, cls, buttons, iconName) {
+      const card = mk("div", `card ${cls ?? ""}`);
+      const top = mk("div", "card-top");
+      if (iconName) top.appendChild(icon(iconName, 20));
+      top.appendChild(mk("div", "card-title", title));
+      card.append(top, mk("div", `big${String(big).length > 9 ? " small" : ""}`, big));
+      if (sub) card.appendChild(mk("div", "card-sub", sub));
+      (buttons ?? []).forEach(b => card.appendChild(b));
+      return card;
+    }
+
+    function renderHero() {
+      const p = journey.player;
+      syncRegen(p);
+      el("hero-msg").textContent = heroMessage;
+      const need = xpToNext(p.level);
+      el("hero-title").textContent = `${p.name}${p.arena?.title ? `, ${titleName(p.arena)}` : ""} · уровень ${p.level}`;
+      el("hero-money").textContent = formatMoney(p.copper);
+      el("hero-xp").textContent = `${p.xp} / ${need}`;
+      el("hero-xp-bar").style.width = barPercent(p.xp, need);
+      el("hero-mana-wrap").hidden = !(p.maxMana > 0);
+      el("hero-mana").textContent = `${p.maxMana} / ${p.maxMana} · полная в начале боя`;
+      el("hero-hp").textContent = `${p.health} / ${p.maxHealth}${regenClock(p) ? " · " + regenClock(p) : ""}`;
+      el("hero-hp-bar").style.width = barPercent(p.health, p.maxHealth);
+
+      // Свободные очки — всегда на виду над вкладками, чтобы их не пропустить.
+      const banner = el("hero-points");
+      banner.replaceChildren();
+      banner.hidden = p.pendingPoints <= 0;
+      if (p.pendingPoints > 0) {
+        banner.appendChild(mk("div", "", `Свободных очков: ${p.pendingPoints}`));
+        const btns = mk("div", "btns");
+        btns.append(
+          makeButton("+1 Сила", () => spendPointFromHero("strength")),
+          makeButton("+1 Выносливость", () => spendPointFromHero("endurance")),
+          makeButton("+1 Ловкость", () => spendPointFromHero("agility"))
+        );
+        if (p.classKey === "mage") btns.appendChild(makeButton("+1 Интеллект", () => spendPointFromHero("intelligence")));
+        banner.appendChild(btns);
+      }
+
+      const tabs = el("hero-tabs");
+      tabs.replaceChildren();
+      HERO_TABS.forEach(t => {
+        const btn = makeButton(t.name, () => { heroTab = t.key; renderHero(); });
+        btn.className = `tab${heroTab === t.key ? " on" : ""}`;
+        tabs.appendChild(btn);
+      });
+
+      const body = el("hero-tab-body");
+      body.replaceChildren();
+      if (heroTab === "stats") renderHeroStats(p, body);
+      else if (heroTab === "equipment") renderHeroEquipment(p, body);
+      else renderHeroBag(p, body);
+      // Любое изменение снаряжения или еды сразу запоминается.
+      saveGame("stop");
+    }
+
+    function renderHeroStats(p, body) {
+      const canSpend = p.pendingPoints > 0;
+      const plus = key => (canSpend ? [makeButton("+1", () => spendPointFromHero(key))] : []);
+      const cards = mk("div", "cards");
+      cards.append(
+        statCard("Сила", `${p.strength}`, p.gear.hits.some(h => h.strMult > 1) ? `+${p.strength} к урону удара, с двуручным ×${BALANCE.twoHandStrength}` : `+${p.strength} к урону каждого удара`, "stat-red", plus("strength"), "dumbbell"),
+        statCard("Выносливость", `${p.endurance}`, `+${healthPerEndurance(p) * p.endurance} к здоровью`, "stat-green", plus("endurance"), "heart"),
+        statCard("Ловкость", `${p.agility}${directionAgility(p) ? ` +${directionAgility(p)}` : ""}`,
+          `Уклонение ${p.dodge}%, крит +${critBonusOf(p)}%`, "stat-cyan", plus("agility"), "feather"),
+        statCard("Уровень", `${p.level}`, `+${healthPerLevel(p) * (p.level - 1)} к здоровью`, "stat-gold", [], "level")
+      );
+      // Интеллект и мана есть только у мага: воину очко в Интеллекте ничего бы не дало.
+      if (p.classKey === "mage") cards.append(statCard("Интеллект", `${p.intelligence}`, `Мана в бою: ${p.maxMana}`, "stat-violet", plus("intelligence"), "flask"));
+      body.append(mk("div", "section-title", "Характеристики"), cards);
+
+      const fight = mk("div", "cards");
+      fight.append(
+        p.spellDamage ? statCard("Заклинание", rangeText(p.spellDamage), `мана −${SPELL.cost}; без маны удар ${damageText(p)}`, "", [], "flask") : statCard("Урон за удар", damageText(p), `ударов за ход: ${p.gear.strikes}`, "", [], "sword"),
+        p.spellDamage ? statCard("Мана", `${p.maxMana}`, `в начале боя; +${BALANCE_MANA.regen} за ход`, "", [], "flask") : statCard("Шанс крита", critText(p), `по открытой зоне ×${CRIT_MULTIPLIER}, пробивает блок`, "", [], "star"),
+        statCard("Блоки за ход", `${p.gear.blocks}`, "закрывают зоны тела", "", [], "shield"),
+        statCard("Уклонение", `${p.dodge}%`, "от каждого прошедшего удара", "", [], "feather")
+      );
+      body.append(mk("div", "section-title", "В бою"), fight);
+
+      const armor = mk("div", "cards");
+      const ZONE_ICONS = ["helm", "armor", "pants", "boots"];
+      ZONES.forEach((z, i) => armor.appendChild(statCard(z, `${p.gear.armor[i]}`, `гасит ${armorCutPercent(p.gear.armor[i])}% урона`, "", [], ZONE_ICONS[i])));
+      body.append(mk("div", "section-title", "Броня по зонам"), armor);
+
+      const dir = mk("div", "cards");
+      if (p.classKey === "mage") {
+        dir.appendChild(statCard("Класс", "Маг", "Бьёт заклинаниями, которые не держит блок. Мана и урон растут от Интеллекта.", "wide", [], "flask"));
+      } else if (p.direction) {
+        const card = statCard("Направление", DIRECTIONS[p.direction].name, DIRECTIONS[p.direction].description, "wide", [], DIRECTION_ICONS[p.direction]);
+        dir.appendChild(card);
+      } else if (journey.phase === "capital") {
+        dir.appendChild(statCard("Направление", "не выбрано", "Выбрать можно у учителя воинов на площади.", "wide empty"));
+      }
+      if (dir.children.length) body.append(mk("div", "section-title", "Путь"), dir);
+
+      if (p.classKey === "mage") {
+        const book = mk("div", "cards");
+        p.spells.forEach(key => {
+          const sp = SPELLS[key];
+          book.appendChild(statCard(sp.name, rangeText(p.spellDamage), `мана −${sp.cost}; блок не держит; крит ${p.spellDamage.crit}%`, "stat-violet", [], "flask"));
+        });
+        body.append(mk("div", "section-title", "Книга заклинаний"), book);
+      }
+    }
+
+    function renderHeroEquipment(p, body) {
+      const cards = mk("div", "cards");
+      SLOTS.forEach(slot => {
+        const key = p.equipment[slot.key];
+        const card = mk("div", `card${key ? "" : " empty"}`);
+        card.appendChild(mk("div", "card-title", slot.name));
+        if (!slot.active) {
+          card.appendChild(mk("div", "card-sub", "пока недоступно"));
+        } else if (key) {
+          const nameRow = mk("div", "card-top");
+          nameRow.append(itemIcon(key, 22), mk("div", "name", ITEMS[key].name));
+          card.append(nameRow, mk("div", "card-sub", ITEMS[key].description));
+          card.appendChild(makeButton("Снять", () => heroAction(() => unequipFromUi(p, slot.key), `Снято: ${ITEMS[key].name}`)));
+        } else {
+          const occupied = slot.key === "offHand" && p.equipment.mainHand && ITEMS[p.equipment.mainHand].type === "weapon2h";
+          card.appendChild(mk("div", "card-sub", occupied ? "занята двуручным оружием" : "пусто"));
+        }
+        cards.appendChild(card);
+      });
+      const summary = mk("div", "cards");
+      summary.append(
+        statCard("Урон за удар", damageText(p), `ударов за ход: ${p.gear.strikes}`, "", [], "sword"),
+        statCard("Блоки", `${p.gear.blocks}`, "за ход", "", [], "shield"),
+        statCard("Броня", p.gear.armor.join(" / "), "голова / корпус / пояс / ноги", "", [], "armor")
+      );
+      body.append(mk("div", "section-title", "Итог снаряжения"), summary, mk("div", "section-title", "Надето"), cards);
+    }
+
+    function renderHeroBag(p, body) {
+      const keys = Object.keys(p.inventory).filter(k => p.inventory[k] > 0);
+      if (keys.length === 0) {
+        body.appendChild(mk("p", "muted", "В рюкзаке пока пусто."));
+        return;
+      }
+      const cards = mk("div", "cards");
+      keys.forEach(key => {
+        const item = ITEMS[key];
+        const buttons = [];
+        if (!canUseItem(p, item)) {
+          buttons.push(makeButton("Магу не подходит", () => {}, true));
+        } else if (item.type === "food") {
+          buttons.push(makeButton("Съесть", () => useItem(key), p.health >= p.maxHealth));
+        } else if (item.type === "weapon1h") {
+          const main = p.equipment.mainHand ? ITEMS[p.equipment.mainHand] : null;
+          buttons.push(makeButton("В основную руку", () => heroAction(() => equipItem(p, key, "mainHand"), `${item.name}: надето в основную руку`)));
+          buttons.push(makeButton("Во вторую руку", () => heroAction(() => equipItem(p, key, "offHand"), `${item.name}: надето во вторую руку`),
+            !(main && main.type === "weapon1h")));
+        } else if (item.type === "staff") {
+          buttons.push(makeButton("В руку", () => heroAction(() => equipItem(p, key, "mainHand"), `${item.name}: надето`)));
+        } else if (item.type === "weapon2h") {
+          buttons.push(makeButton("Надеть (обе руки)", () => heroAction(() => equipItem(p, key, "mainHand"), `${item.name}: надето в обе руки`)));
+        } else if (item.type === "shield") {
+          buttons.push(makeButton("Надеть щит", () => heroAction(() => equipItem(p, key, "offHand"), `${item.name}: надето`)));
+        } else if (item.type === "armor") {
+          buttons.push(makeButton("Надеть", () => heroAction(() => equipItem(p, key, item.slot), `${item.name}: надето`)));
+        }
+        const card = mk("div", "card");
+        const nameRow = mk("div", "card-top");
+        nameRow.append(itemIcon(key, 24), mk("div", "name", `${rarityMark(key)} ${item.name} ×${p.inventory[key]}`.trim()));
+        card.append(nameRow, mk("div", "card-sub", item.description));
+        const holder = mk("div", "btns");
+        buttons.forEach(b => holder.appendChild(b));
+        card.appendChild(holder);
+        cards.appendChild(card);
+      });
+      body.appendChild(cards);
+    }
+
+    function useItem(key) {
+      const p = journey.player;
+      if (!(p.inventory[key] > 0)) return;
+      p.inventory[key] -= 1;
+      p.health = Math.min(p.maxHealth, p.health + ITEMS[key].heal);
+      renderHero();
+    }
+
+    // Экран героя открывается с остановки дороги или после поражения в бою; вернуться нужно туда, откуда пришли.
+    let heroReturnScreen = "story";
+
+    function openHero(returnScreen) {
+      heroReturnScreen = ["battle", "capital", "teacher", "arena", "shop", "tavern", "expedition"].includes(returnScreen) ? returnScreen : "story";
+      heroMessage = "";
+      heroTab = "stats";
+      renderHero();
+      showScreen("hero");
+    }
+
+    function closeHero() {
+      if (heroReturnScreen === "battle") {
+        showScreen("battle");
+        return;
+      }
+      if (heroReturnScreen === "capital") { showCapital(); return; }
+      if (heroReturnScreen === "teacher") { openTeacher(); return; }
+      if (heroReturnScreen === "arena") { showArena(); return; }
+      if (heroReturnScreen === "shop") { showShop(); return; }
+      if (heroReturnScreen === "tavern") { showTavern(); return; }
+      if (heroReturnScreen === "expedition") { showExpedition(); return; }
+      el("story-status").textContent = JOURNEY[journey.index].type === "end" ? "" : heroStatusText();
+      showScreen("story");
+    }
+
+    // Награда за победу применяется сразу, а на экран переходим по кнопке: так победа запоминается в момент победы.
+    // Уровней за один бой может прибавиться несколько, поэтому цикл, а не одно условие.
+    // loot — трофеи вида { ключПредмета: количество }, они попадают в рюкзак.
+    function grantRewards(xp, copper, loot) {
+      const p = journey.player;
+      p.xp += xp;
+      p.copper += copper;
+      for (const key in (loot ?? {})) addToInventory(p, key, loot[key]);
+      const oldMax = p.maxHealth;
+      const oldLevel = p.level;
+      while (p.xp >= xpToNext(p.level)) {
+        p.xp -= xpToNext(p.level);
+        p.level += 1;
+        p.pendingPoints += POINTS_PER_LEVEL;
+      }
+      // Каждый новый уровень сам добавляет здоровье, независимо от очков выносливости.
+      refreshDerived(p);
+      p.health += p.maxHealth - oldMax;
+      journey.levelsGained = p.level - oldLevel;
+    }
+
+    // Текст о полученном: деньги и трофеи; пустые части не показываются.
+    function rewardText(xp, copper, loot) {
+      const parts = [`опыт +${xp}`];
+      if (copper > 0) parts.push(`деньги +${formatMoney(copper)}`);
+      const trophies = Object.keys(loot ?? {}).map(k => `${ITEMS[k].name} ×${loot[k]}`);
+      if (trophies.length) parts.push(`трофеи: ${trophies.join(", ")}`);
+      return parts.join(", ");
+    }
+
+    function awardVictory(xp, copper, loot) {
+      grantRewards(xp, copper, loot);
+      journey.index += 1;
+      // Экран повышения уровня показывается только когда уровень только что вырос; отложенные очки им не навязываются снова.
+      saveGame(journey.levelsGained > 0 ? "levelup" : "stop");
+    }
+
+    function proceedAfterFight() {
+      if (journey.levelsGained > 0) showLevelUp();
+      else runStop();
+    }
+
+    // Само вложение очка; что показать после него, решает вызывающий (экран уровня или экран героя).
+    function applyPoint(statKey) {
+      const p = journey.player;
+      if (p.pendingPoints <= 0) return false;
+      const oldMax = p.maxHealth;
+      p[statKey] += 1;
+      p.pendingPoints -= 1;
+      refreshDerived(p);
+      // Рост максимума сразу добавляется и к текущему здоровью, иначе очко выносливости ощущалось бы только после привала.
+      p.health += p.maxHealth - oldMax;
+      return true;
+    }
+
+    function spendPoint(statKey) {
+      if (!applyPoint(statKey)) return;
+      saveGame("levelup");
+      showLevelUp();
+    }
+
+    function spendPointFromHero(statKey) {
+      if (applyPoint(statKey)) renderHero();
+    }
+
+    function showLevelUp() {
+      const p = journey.player;
+      el("levelup-title").textContent = `Новый уровень! Теперь ты на уровне ${p.level}`;
+      el("levelup-points").textContent = `Уровень сам добавил +${healthPerLevel(p) * journey.levelsGained} к максимуму здоровья. Очков для распределения: ${p.pendingPoints}.${p.pendingPoints > 0 ? " Можно распределить позже на экране «Герой и рюкзак»." : ""}`;
+
+      const rows = [
+        { key: "strength", name: "Сила", icon: "dumbbell", cls: "stat-red", big: `${p.strength}`, info: `урон за удар: ${damageText(p)}` },
+        { key: "endurance", name: "Выносливость", icon: "heart", cls: "stat-green", big: `${p.endurance}`, info: `здоровье: ${p.health} / ${p.maxHealth}` },
+        { key: "agility", name: "Ловкость", icon: "feather", cls: "stat-cyan", big: `${p.agility}${directionAgility(p) ? ` +${directionAgility(p)}` : ""}`, info: `уклонение ${p.dodge}%, крит +${critBonusOf(p)}%` }
+      ];
+      if (p.classKey === "mage") rows.push({ key: "intelligence", name: "Интеллект", icon: "flask", cls: "stat-violet", big: `${p.intelligence}`, info: `мана в бою: ${p.maxMana}` });
+      const container = el("levelup-stats");
+      container.replaceChildren();
+      rows.forEach(r => {
+        container.appendChild(statCard(r.name, r.big, r.info, r.cls, [makeButton("+1", () => spendPoint(r.key), p.pendingPoints === 0)], r.icon));
+      });
+      // Очки можно не тратить сейчас: они остаются у героя и вкладываются на экране «Герой и рюкзак».
+      el("levelup-btn").textContent = p.pendingPoints > 0 ? "Распределю позже (очки сохранятся)" : "Продолжить путь";
+      showScreen("levelup");
+    }
+
+    function runFight(stop) {
+      // Копия игрока на время боя: если проиграешь, здоровье до боя останется нетронутым.
+      journey.applied = false;
+      saveGame("stop");
+      const startHealth = journey.player.health;
+      const fighter = { ...journey.player, name: `${journey.player.name} (ур. ${journey.player.level})` };
+      const e = stop.enemy;
+      const bot = createEnemy(e);
+
+      startBattle(fighter, bot, stop.intro, progressText(), outcome => {
+        if (outcome === "win") {
+          journey.player.health = fighter.health;
+          awardVictory(e.xp, e.copper ?? 0, e.loot);
+          const need = xpToNext(journey.player.level);
+          el("result").textContent = journey.levelsGained > 0
+            ? `Победа! ${rewardText(e.xp, e.copper ?? 0, e.loot)}. Новый уровень!`
+            : `Победа! ${rewardText(e.xp, e.copper ?? 0, e.loot)} (опыт теперь ${journey.player.xp} / ${need})`;
+          el("player-xp").textContent = `Опыт: ${journey.player.xp} / ${need}`;
+          showAfterButton("Идти дальше", proceedAfterFight);
+        } else {
+          showAfterButton("Попробовать снова", runFight.bind(null, stop));
+          journey.player.health = startHealth;
+          // После поражения можно сменить снаряжение или поесть перед новой попыткой.
+          const heroBtn = el("after-hero-btn");
+          heroBtn.onclick = () => openHero("battle");
+          heroBtn.hidden = false;
+        }
+      });
+      el("player-xp").textContent = `Опыт: ${journey.player.xp} / ${xpToNext(journey.player.level)}`;
+    }
+
+    // ======================= СТОЛИЦА =======================
+    function enterCapital() {
+      journey.phase = "capital";
+      journey.player.regenAt = Date.now();
+      showCapital();
+    }
+
+    function capitalStatusText() {
+      const p = journey.player;
+      return `${p.name}: уровень ${p.level}, здоровье ${p.health} / ${p.maxHealth}, деньги ${formatMoney(p.copper)}.` + regenText(p)
+           + (pathNameOf(p) ? ` Путь: ${pathNameOf(p)}.` : " Путь ещё не выбран.")
+           + (p.pendingPoints > 0 ? ` Свободных очков: ${p.pendingPoints}.` : "");
+    }
+
+    function showCapital() {
+      const p = journey.player;
+      syncRegen(p);
+      el("capital-text").textContent = (capitalNote ? capitalNote + " " : "") + (pathNameOf(p)
+        ? "Шумная площадь столицы. Вокруг торговцы, стража и такие же искатели удачи, как ты."
+        : "Шумная площадь столицы. Начни с учителя воинов: он поможет выбрать путь.");
+      capitalNote = ""; // сообщение о вылазке показывается один раз
+      setStatus("capital-status", p, pathNameOf(p) ? [chip(pathNameOf(p), "dim", p.classKey === "mage" ? "flask" : "shield")] : [], regenText(p));
+      const list = el("capital-buildings");
+      list.replaceChildren();
+      BUILDINGS.forEach(b => {
+        const hint = b.key === "teacher" && !pathNameOf(p) && b.ready ? [chip("Выбери путь", "blue", "star")] : [];
+        const card = infoCard({
+          icon: b.icon, iconSize: 38, title: b.name, sub: b.description, cls: `building${b.ready ? "" : " empty"}`, chips: hint,
+          buttons: [makeButton(b.ready ? "Зайти" : "Закрыто", () => openBuilding(b.key), !b.ready)]
+        });
+        list.appendChild(card);
+      });
+      saveGame("capital");
+      showScreen("capital");
+    }
+
+    function openBuilding(key) {
+      if (key === "gate") startExpedition("forest");
+      if (key === "teacher") openTeacher();
+      if (key === "arena") showArena();
+      if (key === "shop") showShop();
+      if (key === "tavern") openTavern();
+    }
+
+    // ----- Таверна -----
+    let tavernMessage = "";
+    function openTavern() { tavernMessage = ""; showTavern(); }
+
+    function showTavern() {
+      const p = journey.player;
+      syncRegen(p);
+      setStatus("tavern-status", p, [], regenText(p));
+      el("tavern-msg").textContent = tavernMessage;
+      const list = el("tavern-list");
+      list.replaceChildren();
+      const price = tavernPrice(p);
+      const missing = p.maxHealth - p.health;
+      list.appendChild(price <= 0
+        ? infoCard({ icon: "bed", iconSize: 34, title: "Ты и так полон сил", sub: "Отдыхать не нужно.", cls: "wide empty", buttons: [makeButton("Отдохнуть", () => {}, true)] })
+        : infoCard({ icon: "bed", iconSize: 34, title: "Отдохнуть до полного здоровья", sub: "Мгновенно, на мягкой кровати.", cls: "wide",
+            chips: [chip(`+${missing} здоровья`, "red", "heart"), chip(formatMoney(price), "gold", "coin")],
+            buttons: [makeButton("Отдохнуть", tavernRest, p.copper < price)] }));
+      saveGame("capital");
+      showScreen("tavern");
+    }
+
+    function tavernRest() {
+      const p = journey.player;
+      syncRegen(p);
+      const price = tavernPrice(p);
+      if (price <= 0 || p.copper < price) return;
+      const healed = p.maxHealth - p.health;
+      p.copper -= price;
+      p.health = p.maxHealth;
+      p.regenAt = Date.now();
+      tavernMessage = `Ты выспался: здоровье +${healed}, заплачено ${formatMoney(price)}.`;
+      showTavern();
+    }
+
+    // Бесплатный отдых на площади — временная мера, пока нет таверны, иначе после боёв на арене не восстановить здоровье.
+
+    // ----- Магазин -----
+    function shopSellPrice(key) {
+      const item = ITEMS[key];
+      return item.type === "trophy" ? item.value : Math.floor((item.price ?? 0) * SELL_RATE);
+    }
+
+    function buyItem(key) {
+      const p = journey.player;
+      const price = ITEMS[key].price;
+      if (p.copper < price) return;
+      p.copper -= price;
+      addToInventory(p, key, 1);
+      showShop();
+    }
+
+    function sellItem(key, count) {
+      const p = journey.player;
+      const n = Math.min(count, p.inventory[key] ?? 0);
+      if (n <= 0) return;
+      p.inventory[key] -= n;
+      p.copper += shopSellPrice(key) * n;
+      showShop();
+    }
+
+    function showShop() {
+      const p = journey.player;
+      syncRegen(p);
+      setStatus("shop-status", p);
+
+      const buy = el("shop-buy");
+      buy.replaceChildren();
+      let nextTier = null;
+      SHOP_STOCK.forEach(tier => {
+        if (tier.minLevel > p.level) {
+          if (!nextTier) nextTier = tier;
+          return;
+        }
+        tier.items.forEach(key => {
+          const item = ITEMS[key];
+          if (!canUseItem(p, item)) return; // воину не показываем посохи, магу мечи и щиты
+          buy.appendChild(infoCard({ iconEl: itemIcon(key, 26), title: item.name, sub: item.description,
+            chips: [chip(formatMoney(item.price), p.copper < item.price ? "dim" : "gold", "coin")],
+            buttons: [makeButton("Купить", () => buyItem(key), p.copper < item.price)] }));
+        });
+      });
+      el("shop-teaser").textContent = nextTier
+        ? `Новые товары откроются на ${nextTier.minLevel} уровне: ${nextTier.items.filter(k => canUseItem(p, ITEMS[k])).map(k => ITEMS[k].name).join(", ")}.`
+        : "";
+
+      const sell = el("shop-sell");
+      sell.replaceChildren();
+      const keys = Object.keys(p.inventory).filter(k => p.inventory[k] > 0);
+      if (keys.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "muted";
+        empty.textContent = "В рюкзаке ничего нет.";
+        sell.appendChild(empty);
+      }
+      keys.forEach(key => {
+        const count = p.inventory[key];
+        const unit = shopSellPrice(key);
+        const buttons = [makeButton(`Продать 1 (${formatMoney(unit)})`, () => sellItem(key, 1))];
+        if (count > 1) buttons.push(makeButton(`Продать все (${formatMoney(unit * count)})`, () => sellItem(key, count)));
+        sell.appendChild(infoCard({ iconEl: itemIcon(key, 26), title: `${ITEMS[key].name} ×${count}`, buttons }));
+      });
+      saveGame("capital");
+      showScreen("shop");
+    }
+
+    const CATEGORY_ICONS = ["sword", "arena", "fist"];
+
+    function showArena() {
+      const p = journey.player;
+      const a = p.arena;
+      syncRegen(p);
+      syncTickets(a);
+      ensureOffers(p);
+      const rank = ARENA_RANKS[a.rank];
+
+      // Шапка: уровень, здоровье, деньги, ранг, жетоны, билеты и полоса очков ранга.
+      const status = el("arena-status");
+      setStatus("arena-status", p, [chip(`${rank.name}`, "gold", "crown"), chip(`Жетоны: ${a.tokens}`, "gold", "token")].concat(a.title ? [chip(titleName(a), "dim", "crown")] : []), regenText(p));
+      const pips = document.createElement("span");
+      pips.className = "pips";
+      for (let i = 0; i < TICKET_MAX; i++) { const pip = document.createElement("span"); pip.className = `pip${i < a.tickets ? " on" : ""}`; pips.appendChild(pip); }
+      const ticketLine = document.createElement("div");
+      ticketLine.className = "chiprow";
+      ticketLine.append(icon("ticket", 18), pips, document.createTextNode(` ${a.tickets} / ${TICKET_MAX}`));
+      if (a.tickets < TICKET_MAX) {
+        const minutes = Math.max(1, Math.ceil((TICKET_MS - (Date.now() - a.ticketAt)) / 60000));
+        const next = document.createElement("span");
+        next.className = "muted";
+        next.textContent = ` · следующий через ~${minutes} мин`;
+        ticketLine.appendChild(next);
+      }
+      status.appendChild(ticketLine);
+      if (rank.need) {
+        const label = document.createElement("div");
+        label.className = "meter-label";
+        label.innerHTML = `<span>Очки ранга</span><span>${a.points} / ${rank.need}</span>`;
+        const bar = document.createElement("div");
+        bar.className = "bar meter-small";
+        bar.innerHTML = `<div class="fill xpfill" style="width:${barPercent(a.points, rank.need)}"></div>`;
+        status.append(label, bar);
+      }
+
+      const list = el("arena-list");
+      list.replaceChildren();
+
+      const promotionReady = rank.need && a.points >= rank.need;
+      if (promotionReady) {
+        const boss = { name: rank.boss, ...arenaFighterStats(p.level + BOSS_LEVELS_ABOVE) };
+        list.appendChild(infoCard({ icon: "crown", iconSize: 34, title: `Бой за повышение: ранг «${ARENA_RANKS[a.rank + 1].name}»`, cls: "wide promo-card",
+          sub: `${boss.name}, уровень ${boss.level}. Без билетов; можно пробовать снова.`,
+          chips: [chip(`ранг и ${PROMOTION_TOKENS}`, "gold", "token")],
+          buttons: [makeButton("Бой за повышение", () => startArenaFight(boss, "promo", -1))] }));
+      }
+
+      ARENA_CATEGORIES.forEach((cat, i) => {
+        const f = a.offers[i];
+        const r = arenaRewards(p.level, f.level);
+        const open = i < rank.categories;
+        const rr = ratedRewards(p.level, f.level, cat);
+        const card = document.createElement("div");
+        card.className = "card offer";
+
+        const top = document.createElement("div");
+        top.className = "card-top";
+        const title = document.createElement("div");
+        title.className = "name";
+        title.textContent = cat.name;
+        top.append(icon(CATEGORY_ICONS[i], 24), title);
+        card.appendChild(top);
+        const who = document.createElement("div");
+        who.className = "card-sub";
+        who.textContent = `${f.name}, уровень ${f.level}`;
+        card.appendChild(who);
+
+        const normal = document.createElement("div");
+        normal.className = "offer-section";
+        normal.innerHTML = '<div class="offer-label">Обычный бой</div>';
+        normal.appendChild(chipRow([chip(`${r.xp}`, "blue", "star"), chip(formatMoney(r.copper), "gold", "coin")]));
+        normal.appendChild(makeButton("Обычный бой", () => startArenaFight(f, "normal", i)));
+        card.appendChild(normal);
+
+        const rated = document.createElement("div");
+        rated.className = "offer-section";
+        rated.innerHTML = '<div class="offer-label">Бой за ранг</div>';
+        if (open) {
+          rated.appendChild(chipRow([chip(`${rr.points}`, "gold", "crown"), chip(`${rr.tokens}`, "gold", "token"), chip(`−${cat.cost}`, a.tickets < cat.cost ? "dim" : "cyan", "ticket")]));
+        } else {
+          const need = ARENA_RANKS.find(x => x.categories > i).name;
+          rated.appendChild(chipRow([chip(`с ранга «${need}»`, "dim", "lock")]));
+        }
+        rated.appendChild(makeButton("Бой за ранг", () => startArenaFight(f, "rated", i), !open || promotionReady || a.tickets < cat.cost));
+        card.appendChild(rated);
+        list.appendChild(card);
+      });
+      saveGame("capital");
+      showScreen("arena");
+    }
+
+    // mode: "normal" — опыт и деньги; "rated" — очки ранга и жетоны за билеты; "promo" — бой за повышение ранга (без билетов).
+    // Всё, что зависит от состояния героя, фиксируется в начале боя; билеты тратятся сразу, чтобы выход из игры не спасал от списания.
+    function startArenaFight(f, mode, catIdx) {
+      const p = journey.player;
+      const a = p.arena;
+      const cat = ARENA_CATEGORIES[catIdx];
+      syncTickets(a);
+      if (mode === "rated") {
+        if (a.tickets < cat.cost) return;
+        if (a.tickets >= TICKET_MAX) a.ticketAt = Date.now(); // билеты были полными, отсчёт возврата начинается сейчас
+        a.tickets -= cat.cost;
+      }
+      const normal = arenaRewards(p.level, f.level);
+      const rated = mode === "rated" ? ratedRewards(p.level, f.level, cat) : null;
+      syncRegen(p);
+      const startHealth = p.health;
+      const fighter = { ...p, name: `${p.name} (ур. ${p.level})` };
+      const bot = createEnemy(arenaEnemyDef(f));
+      const label = mode === "promo" ? "Бой за повышение" : (mode === "rated" ? "Бой за ранг" : "Арена");
+      saveGame("capital");
+      startBattle(fighter, bot, `${label}. Твой соперник: ${f.name}, уровень ${f.level}.`, `${label}: ${f.name}`, outcome => {
+        p.regenAt = Date.now(); // после боя отсчёт восстановления начинается заново
+        if (catIdx >= 0) a.offers[catIdx] = null; // после боя с этим соперником предложение обновляется
+        if (outcome === "win") {
+          p.health = fighter.health;
+          let text;
+          if (mode === "normal") {
+            grantRewards(normal.xp, normal.copper);
+            text = rewardText(normal.xp, normal.copper);
+          } else if (mode === "rated") {
+            const xp = Math.round(normal.xp * RATED_XP_SHARE);
+            grantRewards(xp, 0);
+            a.points += rated.points;
+            a.tokens += rated.tokens;
+            text = `очки ранга +${rated.points}, жетоны +${rated.tokens}, опыт +${xp}`;
+          } else {
+            grantRewards(0, 0);
+            a.rank += 1;
+            a.points = 0;
+            a.tokens += PROMOTION_TOKENS;
+            text = `ты получил ранг «${ARENA_RANKS[a.rank].name}», жетоны +${PROMOTION_TOKENS}`;
+          }
+          saveGame("capital");
+          const need = xpToNext(p.level);
+          el("result").textContent = `Победа! ${text}` + (journey.levelsGained > 0 ? ". Новый уровень!" : (mode === "normal" ? ` (опыт теперь ${p.xp} / ${need})` : ""));
+          el("player-xp").textContent = `Опыт: ${p.xp} / ${need}`;
+          showAfterButton("Вернуться на арену", () => (journey.levelsGained > 0 ? showLevelUp() : showArena()));
+        } else {
+          p.health = startHealth;
+          saveGame("capital");
+          showAfterButton("Вернуться на арену", showArena);
+          if (mode === "rated") el("result").textContent += ` Билеты потрачены: ${cat.cost}.`;
+          const heroBtn = el("after-hero-btn");
+          heroBtn.onclick = () => openHero("battle");
+          heroBtn.hidden = false;
+        }
+      });
+      el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
+    }
+
+    // ----- Лавка жетонов -----
+    let arenaShopMessage = "";
+    function showArenaShop() {
+      const p = journey.player;
+      syncRegen(p);
+      const a = p.arena;
+      setStatus("arenashop-status", p, [chip(`Жетоны: ${a.tokens}`, "gold", "token"), chip(ARENA_RANKS[a.rank].name, "dim", "crown")].concat(a.title ? [chip(titleName(a), "dim", "crown")] : []));
+      el("arenashop-msg").textContent = arenaShopMessage;
+      const list = el("arenashop-list");
+      list.replaceChildren();
+      ARENA_GOODS.forEach(g => {
+        list.appendChild(infoCard({ iconEl: itemIcon(g.item, 26), title: ITEMS[g.item].name, sub: ITEMS[g.item].description,
+          chips: [chip(`${g.cost}`, a.tokens < g.cost ? "dim" : "gold", "token")],
+          buttons: [makeButton("Купить", () => buyArenaGood(g), a.tokens < g.cost)] }));
+      });
+      ARENA_TITLES.forEach(t => {
+        const owned = a.titles.includes(t.key);
+        const rankOk = a.rank >= t.rank;
+        if (owned) {
+          list.appendChild(infoCard({ icon: "crown", title: `Звание «${t.name}»`, sub: "Куплено.", cls: "promo-card",
+            buttons: [makeButton(a.title === t.key ? "Носится" : "Носить", () => wearTitle(t), a.title === t.key)] }));
+        } else {
+          list.appendChild(infoCard({ icon: rankOk ? "crown" : "lock", title: `Звание «${t.name}»`, sub: rankOk ? "Звание рядом с именем героя." : `Нужен ранг «${ARENA_RANKS[t.rank].name}».`,
+            cls: rankOk ? "" : "empty", chips: [chip(`${t.cost}`, a.tokens < t.cost ? "dim" : "gold", "token")],
+            buttons: [makeButton("Купить", () => buyTitle(t), !rankOk || a.tokens < t.cost)] }));
+        }
+      });
+      saveGame("capital");
+      showScreen("arenashop");
+    }
+
+    function buyArenaGood(g) {
+      const a = journey.player.arena;
+      if (a.tokens < g.cost) return;
+      a.tokens -= g.cost;
+      addToInventory(journey.player, g.item, 1);
+      arenaShopMessage = `Куплено: ${ITEMS[g.item].name}.`;
+      showArenaShop();
+    }
+
+    function buyTitle(t) {
+      const a = journey.player.arena;
+      if (a.tokens < t.cost || a.rank < t.rank || a.titles.includes(t.key)) return;
+      a.tokens -= t.cost;
+      a.titles.push(t.key);
+      a.title = t.key;
+      arenaShopMessage = `Теперь ты носишь звание «${t.name}».`;
+      showArenaShop();
+    }
+
+    function wearTitle(t) {
+      journey.player.arena.title = t.key;
+      arenaShopMessage = `Теперь ты носишь звание «${t.name}».`;
+      showArenaShop();
+    }
+
+    // ----- Учитель воинов -----
+    // Выбор направления нельзя отменить, поэтому он подтверждается вторым нажатием.
+    let teacherArmed = null;
+
+    function openTeacher() {
+      syncRegen(journey.player);
+      teacherArmed = null;
+      el("teacher-result").textContent = "";
+      renderTeacher();
+      showScreen("teacher");
+    }
+
+    const DIRECTION_ICONS = { tank: "shield", damager: "sword", evader: "feather" };
+    function renderTeacher() {
+      const p = journey.player;
+      const box = el("teacher-choices");
+      box.replaceChildren();
+      // Кнопки с подтверждением: первое нажатие «взводит» выбор, второе его применяет.
+      const confirmButtons = (key, apply) => (teacherArmed === key
+        ? [makeButton("Точно? Это нельзя изменить", apply), makeButton("Отмена", () => { teacherArmed = null; renderTeacher(); })]
+        : [makeButton("Выбрать", () => { teacherArmed = key; renderTeacher(); })]);
+
+      if (!p.classChosen) {
+        el("teacher-text").textContent = "Старый воин оглядывает тебя: «Для начала скажи, кем ты хочешь стать. Очки, вложенные в характеристики, вернутся к тебе, если ты выберешь магию. Вещи останутся при тебе.»";
+        box.appendChild(infoCard({ icon: "sword", iconSize: 34, title: "Воин", sub: "Бьёт оружием, держит удары щитом и бронёй. Следующим шагом выберешь направление.", cls: teacherArmed === "class:warrior" ? "promo-card" : "", buttons: confirmButtons("class:warrior", () => chooseClass("warrior")) }));
+        box.appendChild(infoCard({ icon: "flask", iconSize: 34, title: "Маг", sub: "Бьёт заклинаниями: их не держит блок. Меньше здоровья, нет щита. Появляются Интеллект, мана и книга заклинаний.", cls: teacherArmed === "class:mage" ? "promo-card" : "", buttons: confirmButtons("class:mage", () => chooseClass("mage")) }));
+        return;
+      }
+      if (p.classKey === "warrior" && !p.direction) {
+        el("teacher-text").textContent = "Старый воин оглядывает тебя: «Выбери, каким бойцом станешь. Очки, которые ты вложил в характеристики, вернутся к тебе, и ты распределишь их заново. Вещи останутся при тебе.»";
+        for (const key in DIRECTIONS) {
+          const d = DIRECTIONS[key];
+          box.appendChild(infoCard({ icon: DIRECTION_ICONS[key] ?? "sword", iconSize: 34, title: d.name, sub: d.description, cls: teacherArmed === key ? "promo-card" : "", buttons: confirmButtons(key, () => chooseDirection(key)) }));
+        }
+        return;
+      }
+      el("teacher-text").textContent = `Ты уже выбрал путь: ${pathNameOf(p)}. Пока учитель больше ничему не может тебя научить.`;
+    }
+
+    // Возвращаем потраченные очки: характеристики откатываются к стартовым, очки идут в «свободные».
+    function refundStats(p) {
+      p.pendingPoints += (p.strength - BASE_STAT) + (p.endurance - BASE_STAT) + (p.agility - BASE_STAT) + (p.intelligence - BASE_STAT);
+      p.strength = p.endurance = p.agility = p.intelligence = BASE_STAT;
+    }
+
+    function chooseClass(key) {
+      const p = journey.player;
+      p.classChosen = true;
+      p.classKey = key;
+      if (key === "mage") {
+        refundStats(p);
+        p.spells = ["arrow"];
+        p.direction = null;
+        enforceClassGear(p);
+      }
+      refreshDerived(p);
+      p.health = Math.min(p.health, p.maxHealth);
+      teacherArmed = null;
+      saveGame("capital");
+      renderTeacher();
+      el("teacher-result").textContent = key === "mage"
+        ? `Теперь ты маг. Свободных очков: ${p.pendingPoints}. Распредели их на экране «Герой и рюкзак»; в книге заклинаний у тебя «${SPELL.name}».`
+        : "Ты воин. Теперь выбери направление.";
+    }
+
+    function chooseDirection(key) {
+      const p = journey.player;
+      refundStats(p);
+      p.direction = key;
+      refreshDerived(p);
+      p.health = Math.min(p.health, p.maxHealth);
+      teacherArmed = null;
+      saveGame("capital");
+      renderTeacher();
+      el("teacher-result").textContent = `Теперь ты ${DIRECTIONS[key].name}. Свободных очков: ${p.pendingPoints}. Распредели их на экране «Герой и рюкзак».`;
+    }
+
+    // ======================= ВЫЛАЗКИ ЗА ГОРОД =======================
+    // Место — это карта из точек, соединённых тропами. Часть точек видна сразу, остальные скрыты, пока их не найдёшь.
+    // В пути между точками возможна случайная встреча. Всё найденное лежит в «добыче похода» и становится твоим,
+    // только если вернуться в город через выход; поражение в вылазке добычу отнимает.
+    const EXPEDITION = {
+      encounterChance: 0.45,   // шанс встречи в пути между точками
+      lookEncounterChance: 0.2, // шанс встречи, пока осматриваешься
+      revealChance: 0.6,       // шанс найти скрытую точку по соседству
+      defeatHealthShare: 0.3   // с каким здоровьем герой очнётся в городе после поражения
+    };
+
+    // Враги вылазок. hp и dmg — множители к бойцу арены того же уровня (у зверя один удар, поэтому dmg выше).
+    // drops: шанс (0…1) и количество; copper — множитель к базовой денежной награде уровня.
+    const WILD_ENEMIES = {
+      wolf:   { name: "Волк", gear: "none", hp: 0.8, dmg: 1.4, xp: 0.8, drops: [{ item: "wolfPelt", chance: 0.45, min: 1, max: 1 }] },
+      boar:   { name: "Кабан", gear: "none", hp: 1.0, dmg: 1.2, xp: 0.9, drops: [{ item: "boarTusk", chance: 0.4, min: 1, max: 2 }] },
+      bandit: { name: "Лесной разбойник", gear: "weapon", hp: 1.0, dmg: 1.3, xp: 1.0, armored: true, drops: [{ copper: true, chance: 0.55, min: 0.1, max: 1.5 }, { copper: true, chance: 0.06, min: 3, max: 6 }] },
+      leader: { name: "Вожак стаи", gear: "none", hp: 1.6, dmg: 1.8, xp: 2.0, rareBoost: 3, armored: true, drops: [{ item: "wolfPelt", chance: 1, min: 1, max: 2 }, { item: "leaderFang", chance: 0.6, min: 1, max: 1 }] }
+    };
+
+    // Точки места. links — тропы (в обе стороны); visible — видна с начала; kind: exit — выход в город.
+    // first — событие при первом приходе в вылазке: fight (бой).
+    // find — находка, которую игрок открывает кнопкой; copper — множитель к базовой награде;
+    // respawn — через сколько вылазок после открытия здесь снова появится добыча.
+    const LOCATIONS = {
+      forest: {
+        name: "Тёмный лес",
+        intro: "За городскими воротами начинается лес. Тропы расходятся в разные стороны, и не все их видно сразу.",
+        encounters: ["wolf", "wolf", "boar", "bandit"],
+        start: "edge",
+        points: {
+          edge:     { name: "Опушка",             x: 50, y: 90, visible: true,  kind: "exit",  text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться в город." },
+          clearing: { name: "Поляна",             x: 24, y: 64, visible: true,  kind: "place", text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", respawn: 1, copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
+          brook:    { name: "Ручей",              x: 76, y: 64, visible: true,  kind: "place", text: "Быстрый ручей. На влажной земле видны следы зверей.", find: { label: "Поискать у воды", title: "Берег ручья", respawn: 1, copper: [0, 0.4] } },
+          oak:      { name: "Старый дуб",         x: 10, y: 40, visible: false, kind: "place", text: "Огромный дуб, в дупле которого кто-то оставил сундучок.", find: { label: "Открыть сундучок", title: "Сундучок в дупле", respawn: 4, copper: [1.0, 2.5], rareBoost: 4 } },
+          hut:      { name: "Заброшенная сторожка", x: 44, y: 30, visible: false, kind: "place", text: "Покосившаяся сторожка лесника. Давно никто не заходил.", find: { label: "Обыскать сторожку", title: "Сторожка", respawn: 2, copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7 } },
+          wolfpath: { name: "Волчья тропа",       x: 76, y: 20, visible: false, kind: "place", text: "Тропа, вытоптанная лапами. Здесь живёт вожак стаи.", first: { type: "fight", enemy: "leader" } }
+        },
+        links: [["edge", "clearing"], ["edge", "brook"], ["clearing", "oak"], ["clearing", "hut"], ["brook", "wolfpath"], ["hut", "wolfpath"]]
+      }
+    };
+
+    // Данные вылазки хранятся в journey.expedition: { loc, at, visible[], visited[], loot{copper, items}, mana, log }.
+    const neighborsOf = (loc, id) => loc.links.filter(l => l.includes(id)).map(l => (l[0] === id ? l[1] : l[0]));
+    const rand = (a, b) => a + Math.random() * (b - a);
+    let capitalNote = "";
+    let afterLevelUp = null;
+
+    function startExpedition(locKey) {
+      const p = journey.player;
+      if (!journey.expedition) {
+        const loc = LOCATIONS[locKey];
+        syncRegen(p);
+        worldState().trips += 1;
+        journey.expedition = {
+          loc: locKey, at: loc.start, mana: p.maxMana, log: loc.intro,
+          visible: Object.keys(loc.points).filter(k => loc.points[k].visible),
+          visited: [loc.start], loot: { copper: 0, items: {} }
+        };
+        saveGame("capital");
+      }
+      showExpedition();
+    }
+
+    // Редкость: ★ — необычное, ★★ — редкое. Это только пометка и цена, силы предметам не добавляет.
+    const RARITY_STARS = { uncommon: "★", rare: "★★" };
+    function rarityMark(key) { return RARITY_STARS[ITEMS[key].rarity] ?? ""; }
+
+    function lootText(loot) {
+      const parts = [];
+      if (loot.copper > 0) parts.push(formatMoney(loot.copper));
+      for (const key in loot.items) if (loot.items[key] > 0) parts.push(`${rarityMark(key)}${ITEMS[key].name} ×${loot.items[key]}`.trim());
+      return parts.length ? parts.join(", ") : "пока ничего";
+    }
+
+    function addLoot(exp, copper, items) {
+      exp.loot.copper += copper;
+      for (const key in (items ?? {})) exp.loot.items[key] = (exp.loot.items[key] ?? 0) + items[key];
+    }
+
+    // Рисунок карты: видимые точки и тропы между ними; текущая точка залита, посещённые обведены.
+    function mapSvg(exp, loc) {
+      // Рамка карты подгоняется под видимые точки, чтобы не оставалось пустого места.
+      const xs = exp.visible.map(id => loc.points[id].x), ys = exp.visible.map(id => loc.points[id].y);
+      // Не уже 70×55 условных единиц, иначе при двух-трёх точках подписи становятся огромными.
+      const fit = (lo, hi, min) => { let a = lo, b = hi; if (b - a < min) { const mid = (a + b) / 2; a = mid - min / 2; b = mid + min / 2; } return [a, b - a]; };
+      const [vx, vw] = fit(Math.min(...xs) - 14, Math.max(...xs) + 14, 70);
+      const [vy, vh] = fit(Math.min(...ys) - 10, Math.max(...ys) + 14, 55);
+      let svg = `<svg viewBox="${vx} ${vy} ${vw} ${vh}" class="map-svg" aria-label="Карта места">`;
+      loc.links.forEach(([a, b]) => {
+        if (exp.visible.includes(a) && exp.visible.includes(b)) {
+          const A = loc.points[a], B = loc.points[b];
+          svg += `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="map-path"/>`;
+        }
+      });
+      exp.visible.forEach(id => {
+        const pt = loc.points[id];
+        const cls = id === exp.at ? "here" : (exp.visited.includes(id) ? "seen" : "new");
+        svg += `<circle cx="${pt.x}" cy="${pt.y}" r="${id === exp.at ? 4.2 : 3.2}" class="map-node ${cls}"/>`
+             + `<text x="${pt.x}" y="${pt.y + 8.5}" class="map-label">${pt.name}</text>`;
+      });
+      return svg + "</svg>";
+    }
+
+    function showExpedition() {
+      const p = journey.player;
+      const exp = journey.expedition;
+      const loc = LOCATIONS[exp.loc];
+      const here = loc.points[exp.at];
+      exp.returning = false;
+      el("exp-title").textContent = `${loc.name}: ${here.name}`;
+      el("exp-text").textContent = here.text;
+      const extra = [chip(`Добыча: ${lootText(exp.loot)}`, "gold", "bag")];
+      if (p.maxMana > 0) extra.push(chip(`Мана ${exp.mana} / ${p.maxMana}`, "blue", "flask"));
+      setStatus("exp-status", p, extra);
+      el("exp-map").innerHTML = mapSvg(exp, loc);
+      el("exp-log").textContent = exp.log ?? "";
+
+      const findBox = el("exp-find");
+      findBox.replaceChildren();
+      if (here.find) {
+        const ready = findReady(exp, exp.at);
+        findBox.appendChild(infoCard({ icon: "bag", title: here.find.title,
+          sub: ready ? "Здесь есть что осмотреть." : "Пусто. Ты уже забрал отсюда всё, что было.",
+          cls: ready ? "promo-card" : "", buttons: ready ? [makeButton(here.find.label, () => openFind(exp.at))] : [] }));
+      }
+
+      const moves = el("exp-moves");
+      moves.replaceChildren();
+      neighborsOf(loc, exp.at).filter(id => exp.visible.includes(id)).forEach(id => {
+        const pt = loc.points[id];
+        const seen = exp.visited.includes(id);
+        moves.appendChild(infoCard({ icon: "tree", title: pt.name, sub: seen ? "Ты здесь уже бывал." : "Не исследовано.", cls: seen ? "" : "promo-card",
+          buttons: [makeButton("Идти", () => travelTo(id))] }));
+      });
+      const hasHidden = neighborsOf(loc, exp.at).some(id => !exp.visible.includes(id));
+      el("exp-look-btn").disabled = !hasHidden;
+      el("exp-look-btn").textContent = hasHidden ? "Осмотреться" : "Осмотреться (здесь всё видно)";
+      const way = pathHome(exp, loc);
+      el("exp-home-btn").hidden = false;
+      el("exp-home-btn").textContent = way.length ? `Вернуться в город (переходов: ${way.length})` : "Вернуться в город";
+      el("exp-home-hint").textContent = way.length ? "Дорога домой идёт через Опушку, по пути возможны встречи." : "";
+      saveGame("capital");
+      showScreen("expedition");
+    }
+
+    // Показываем, что нашли, и сохраняем это в журнале вылазки.
+    function setExpLog(text) { journey.expedition.log = text; }
+
+    // Состояние мира живёт между вылазками: счётчик вылазок и когда какая находка была открыта.
+    function worldState() { return (journey.world ??= { trips: 0, opened: {} }); }
+    function findReady(exp, id) {
+      const spec = LOCATIONS[exp.loc].points[id].find;
+      const openedAt = worldState().opened[`${exp.loc}:${id}`];
+      return openedAt === undefined || worldState().trips - openedAt >= spec.respawn;
+    }
+
+    function openFind(id) {
+      const exp = journey.expedition;
+      const pt = LOCATIONS[exp.loc].points[id];
+      if (!pt.find || !findReady(exp, id)) return;
+      worldState().opened[`${exp.loc}:${id}`] = worldState().trips; // сначала отмечаем, потом бросаем кубик: перезагрузка не даст открыть дважды
+      const found = rollFindLoot(exp, pt.find);
+      const nothing = !found.copper && !Object.keys(found.items).length;
+      exp.log = nothing ? `${pt.find.title}: пусто.` : `${pt.find.title}: ты нашёл ${lootText(found)}.`;
+      showExpedition();
+    }
+
+    function rollFindLoot(exp, spec) {
+      const unit = arenaBaseMoney(journey.player.level);
+      const copper = spec.copper ? Math.round(unit * rand(spec.copper[0], spec.copper[1])) : 0;
+      const items = (spec.items && Math.random() < (spec.itemChance ?? 1)) ? { ...spec.items } : {};
+      const rare = rollRare(spec.rareBoost ?? 0.5);
+      for (const k in rare) items[k] = (items[k] ?? 0) + rare[k];
+      addLoot(exp, copper, items);
+      return { copper, items };
+    }
+
+    function travelTo(id) {
+      const exp = journey.expedition;
+      const loc = LOCATIONS[exp.loc];
+      const name = loc.points[id].name;
+      setExpLog("");
+      if (Math.random() < EXPEDITION.encounterChance) {
+        const roll = Math.random();
+        if (roll < 0.6) { // встреча с врагом
+          const kind = loc.encounters[Math.floor(Math.random() * loc.encounters.length)];
+          startWildFight(kind, `По пути к месту «${name}» на тебя нападают.`, () => arriveAt(id));
+          return;
+        }
+        if (roll < 0.85) { // находка в пути
+          const found = rollFindLoot(exp, { copper: [0.1, 0.6], items: { bread: 1 }, itemChance: 0.3 });
+          setExpLog(`По пути ты нашёл: ${lootText({ copper: found.copper, items: found.items }) }.`);
+        } else {
+          setExpLog("Дорога спокойная: ты слышишь только птиц.");
+        }
+      }
+      arriveAt(id);
+    }
+
+    function arriveAt(id) {
+      const exp = journey.expedition;
+      const loc = LOCATIONS[exp.loc];
+      const pt = loc.points[id];
+      exp.at = id;
+      if (exp.returning && id === loc.start) { exp.returning = false; expeditionHome(); return; }
+      const firstTime = !exp.visited.includes(id);
+      if (firstTime) exp.visited.push(id);
+      // Придя в точку, можно заметить скрытые тропы рядом.
+      const newly = revealAround(exp, loc, id);
+      const notes = [];
+      if (exp.log) notes.push(exp.log);
+      if (newly.length) notes.push(`Ты заметил новые места: ${newly.join(", ")}.`);
+      exp.log = notes.join(" ");
+      if (firstTime && pt.first) {
+        if (pt.first.type === "fight") {
+          startWildFight(pt.first.enemy, `${pt.name}: ты не один.`, () => { showExpedition(); });
+          return;
+        }
+      }
+      if (exp.returning) { // продолжаем путь домой
+        const next = pathHome(exp, loc)[0];
+        if (next) { travelTo(next); return; }
+        exp.returning = false;
+      }
+      showExpedition();
+    }
+
+    function revealAround(exp, loc, id) {
+      const names = [];
+      neighborsOf(loc, id).filter(n => !exp.visible.includes(n)).forEach(n => {
+        if (Math.random() < EXPEDITION.revealChance) { exp.visible.push(n); names.push(loc.points[n].name); }
+      });
+      return names;
+    }
+
+    function lookAround() {
+      const exp = journey.expedition;
+      const loc = LOCATIONS[exp.loc];
+      setExpLog("");
+      if (Math.random() < EXPEDITION.lookEncounterChance) {
+        const kind = loc.encounters[Math.floor(Math.random() * loc.encounters.length)];
+        startWildFight(kind, "Пока ты осматривался, кто-то подкрался.", () => showExpedition());
+        return;
+      }
+      const newly = revealAround(exp, loc, exp.at);
+      setExpLog(newly.length ? `Ты заметил новые места: ${newly.join(", ")}.` : "Ты внимательно осмотрелся, но ничего нового не нашёл. Можно попробовать ещё раз.");
+      showExpedition();
+    }
+
+    function makeWildEnemy(kind, level) {
+      const t = WILD_ENEMIES[kind];
+      const L = Math.max(1, level);
+      const base = arenaFighterStats(L).dmg;
+      return {
+        name: t.name, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp), magicResist: Math.floor(0.4 * L),
+        dmg: [Math.round(base[0] * t.dmg), Math.round(base[1] * t.dmg)],
+        armor: t.armored ? [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)] : null
+      };
+    }
+
+    // Редкие находки: шанс срабатывает на каждую победу и на каждую находку в точке.
+    // boost умножает шансы (вожак, сундуки).
+    const RARE_POOL = { uncommon: { chance: 0.08, items: ["amber"] }, rare: { chance: 0.03, items: ["oldRing", "goldNugget"] } };
+    function rollRare(boost = 1) {
+      const out = {};
+      for (const tier of ["rare", "uncommon"]) {
+        const t = RARE_POOL[tier];
+        if (Math.random() < t.chance * boost) { out[t.items[Math.floor(Math.random() * t.items.length)]] = 1; break; }
+      }
+      return out;
+    }
+
+    function rollDrops(kind, level) {
+      const t = WILD_ENEMIES[kind];
+      const unit = arenaBaseMoney(level);
+      const out = { copper: 0, items: {} };
+      t.drops.forEach(d => {
+        if (Math.random() >= d.chance) return;
+        if (d.copper) out.copper += Math.round(unit * rand(d.min, d.max));
+        else out.items[d.item] = (out.items[d.item] ?? 0) + Math.floor(rand(d.min, d.max + 0.999));
+      });
+      const rare = rollRare(WILD_ENEMIES[kind].rareBoost ?? 1);
+      for (const k in rare) out.items[k] = (out.items[k] ?? 0) + rare[k];
+      return out;
+    }
+
+    function startWildFight(kind, introText, onWin) {
+      const p = journey.player;
+      const exp = journey.expedition;
+      const def = makeWildEnemy(kind, p.level);
+      const t = WILD_ENEMIES[kind];
+      const xp = Math.max(1, Math.round(arenaBaseXp(p.level) * t.xp));
+      const fighter = { ...p, name: `${p.name} (ур. ${p.level})`, startMana: exp.mana }; // мана между боями вылазки не возвращается
+      const bot = createEnemy(def);
+      saveGame("capital");
+      startBattle(fighter, bot, introText, `Вылазка: ${t.name}`, outcome => {
+        exp.mana = fighter.mana ?? exp.mana;
+        if (outcome === "win") {
+          p.health = fighter.health;
+          grantRewards(xp, 0);
+          const drops = rollDrops(kind, p.level);
+          addLoot(exp, drops.copper, drops.items);
+          const dropText = (drops.copper > 0 || Object.keys(drops.items).length) ? `, добыча: ${lootText(drops)}` : ", добычи нет";
+          exp.log = `Победа над врагом «${t.name}»: опыт +${xp}${dropText}.`;
+          saveGame("capital");
+          el("result").textContent = `Победа! опыт +${xp}${dropText}` + (journey.levelsGained > 0 ? ". Новый уровень!" : "");
+          el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
+          showAfterButton("Продолжить", () => {
+            if (journey.levelsGained > 0) { afterLevelUp = onWin; showLevelUp(); } else onWin();
+          });
+        } else {
+          showAfterButton("Очнуться в городе", expeditionDefeat);
+        }
+      });
+      el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
+    }
+
+    function expeditionDefeat() {
+      const p = journey.player;
+      p.health = Math.max(1, Math.floor(p.maxHealth * EXPEDITION.defeatHealthShare));
+      p.regenAt = Date.now();
+      journey.expedition = null;
+      capitalNote = "Тебя нашли в лесу и принесли в город. Всё найденное в походе потеряно.";
+      saveGame("capital");
+      showCapital();
+    }
+
+    // Кратчайший путь от текущей точки до выхода по уже известным тропам (поиск в ширину); пустой, если ты уже на выходе.
+    function pathHome(exp, loc) {
+      if (exp.at === loc.start) return [];
+      const prev = { [exp.at]: null };
+      const queue = [exp.at];
+      while (queue.length) {
+        const cur = queue.shift();
+        if (cur === loc.start) break;
+        neighborsOf(loc, cur).filter(n => exp.visible.includes(n) && !(n in prev)).forEach(n => { prev[n] = cur; queue.push(n); });
+      }
+      const path = [];
+      for (let at = loc.start; at !== exp.at && at in prev; at = prev[at]) path.unshift(at);
+      return path;
+    }
+
+    // Нажатие «Вернуться в город»: на выходе сразу домой, иначе идём к выходу шаг за шагом (на каждом шаге возможна встреча).
+    function goHome() {
+      const exp = journey.expedition;
+      const loc = LOCATIONS[exp.loc];
+      const way = pathHome(exp, loc);
+      if (way.length === 0) { expeditionHome(); return; }
+      exp.returning = true;
+      travelTo(way[0]);
+    }
+
+    function expeditionHome() {
+      const p = journey.player;
+      const loot = journey.expedition.loot;
+      p.copper += loot.copper;
+      for (const key in loot.items) addToInventory(p, key, loot.items[key]);
+      capitalNote = `Ты вернулся из вылазки. Принёс: ${lootText(loot)}.`;
+      p.regenAt = Date.now();
+      journey.expedition = null;
+      saveGame("capital");
+      showCapital();
+    }
+
+    // ======================= ЗАПУСК =======================
+    fillPresetSelect(el("player-gear"), "weaponShield");
+    el("player-gear").appendChild(new Option("Маг (заклинания)", "mage")); // только для игрока: у бота нет логики заклинаний
+    fillPresetSelect(el("bot-gear"), "weapon");
+    el("journey-btn").addEventListener("click", onNewGameClick);
+    el("continue-btn").addEventListener("click", loadGame);
+    el("training-btn").addEventListener("click", () => showScreen("training-setup"));
+    el("training-back-btn").addEventListener("click", () => showScreen("menu"));
+    el("start-btn").addEventListener("click", startTraining);
+    el("levelup-btn").addEventListener("click", () => {
+      journey.levelsGained = 0;
+      saveGame("stop");
+      if (afterLevelUp) { const next = afterLevelUp; afterLevelUp = null; next(); return; } // продолжение вылазки после повышения уровня
+      if (journey.phase === "capital") showArena();
+      else runStop();
+    });
+    refreshMenu();
+    el("story-hero-btn").addEventListener("click", () => openHero("story"));
+    el("capital-hero-btn").addEventListener("click", () => openHero("capital"));
+    el("arena-hero-btn").addEventListener("click", () => openHero("arena"));
+    el("exp-hero-btn").addEventListener("click", () => openHero("expedition"));
+    el("exp-look-btn").addEventListener("click", lookAround);
+    el("exp-home-btn").addEventListener("click", goHome);
+    el("shop-hero-btn").addEventListener("click", () => openHero("shop"));
+    el("shop-back-btn").addEventListener("click", showCapital);
+    el("arena-back-btn").addEventListener("click", showCapital);
+    el("tavern-hero-btn").addEventListener("click", () => openHero("tavern"));
+    el("tavern-back-btn").addEventListener("click", showCapital);
+    el("arena-shop-btn").addEventListener("click", () => { arenaShopMessage = ""; showArenaShop(); });
+    el("arenashop-back-btn").addEventListener("click", showArena);
+    el("capital-menu-btn").addEventListener("click", () => showScreen("menu"));
+    el("teacher-hero-btn").addEventListener("click", () => openHero("teacher"));
+    el("teacher-back-btn").addEventListener("click", showCapital);
+    el("hero-back-btn").addEventListener("click", closeHero);
+    el("turn-btn").addEventListener("click", onTurn);
+    el("strike-reset").addEventListener("click", () => {
+      selectedStrikes.length = 0;
+      refreshSelection();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Макет боя</title>
+<style>
+  :root { --bg:#14161d; --card:#1e2230; --line:#343a50; --text:#e8eaf2; --muted:#8e95ad; --red:#ff6b6b; --blue:#6fb7ff; --green:#5fd38b; --gold:#ffd54f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 system-ui, sans-serif; padding:16px; max-width:460px; margin-inline:auto; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  .note { color:var(--muted); font-size:13px; margin-bottom:12px; }
+  .row { display:flex; gap:10px; align-items:center; justify-content:space-between; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px; }
+  .bar { height:10px; background:#0d0f14; border-radius:6px; overflow:hidden; margin-top:4px; }
+  .bar > i { display:block; height:100%; transition:width .4s; }
+  .hp-e > i { background:var(--red); } .hp-p > i { background:var(--green); }
+  .stage { display:flex; gap:12px; align-items:center; }
+  svg { width:130px; flex:none; }
+  .zone { fill:#262b3c; stroke:#4a5170; stroke-width:1.5; }
+  .zone.struck { fill:#5a2a2e; stroke:var(--red); stroke-width:3; }
+  .zone.blocked { stroke:var(--blue); stroke-width:3; stroke-dasharray:5 3; }
+  .zone.warn { animation:pulse 0.9s infinite; stroke:var(--gold); stroke-width:3; }
+  @keyframes pulse { 50% { fill:#4a3d12; } }
+  .legend { font-size:12px; color:var(--muted); }
+  .legend b { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align:-1px; }
+  .telegraph { background:#2a2410; border:1px solid #6b5a1a; color:var(--gold); border-radius:10px; padding:9px 11px; margin-top:8px; font-weight:600; }
+  .telegraph small { display:block; font-weight:400; color:#b8a55a; margin-top:2px; }
+  .zones { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin:6px 0 10px; }
+  button { font:inherit; color:var(--text); background:#2a3046; border:1px solid var(--line); border-radius:9px; padding:9px 6px; cursor:pointer; }
+  button.on { background:#2d4a73; border-color:var(--blue); }
+  button.on-s { background:#6b2a30; border-color:var(--red); }
+  button.go { width:100%; background:#3a6b45; border-color:#4f9660; font-weight:700; padding:11px; }
+  button:disabled { opacity:.5; }
+  .label { font-size:13px; color:var(--muted); margin-top:4px; }
+  .log { font-size:14px; min-height:44px; }
+  .log div { margin:2px 0; }
+  .good { color:var(--green); } .bad { color:var(--red); } .info { color:var(--blue); }
+  label.sw { display:flex; gap:8px; align-items:center; font-size:14px; }
+</style>
+</head>
+<body>
+  <h1>Макет боя: замах врага</h1>
+  <div class="note">Это набросок, как могло бы выглядеть, а не часть игры. Выбери, куда бить и что закрыть, нажми «Ход». Включай и выключай замах и сравни ощущения.</div>
+
+  <div class="card"><label class="sw"><input type="checkbox" id="tele" checked> Показывать замах врага</label></div>
+
+  <div class="card">
+    <div class="row"><b>Волк</b><span id="ehp">30 / 30</span></div>
+    <div class="bar hp-e"><i id="ehpbar" style="width:100%"></i></div>
+    <div class="stage" style="margin-top:10px">
+      <svg viewBox="0 0 130 210">
+        <circle id="z0" class="zone" cx="65" cy="24" r="20"/>
+        <rect id="z1" class="zone" x="35" y="50" width="60" height="62" rx="10"/>
+        <rect id="z2" class="zone" x="40" y="116" width="50" height="26" rx="8"/>
+        <rect id="z3" class="zone" x="42" y="146" width="46" height="56" rx="8"/>
+      </svg>
+      <div>
+        <div class="legend"><b style="background:var(--red)"></b>куда он бил в прошлом ходу</div>
+        <div class="legend"><b style="background:var(--blue)"></b>что он закрывал в прошлом ходу</div>
+        <div id="tgl"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">Куда бьёшь (1 удар)</div>
+    <div class="zones" id="strike"></div>
+    <div class="label">Что закрываешь (2 блока)</div>
+    <div class="zones" id="block"></div>
+    <button class="go" id="go">Ход</button>
+    <div class="row" style="margin-top:10px"><b>Ты</b><span id="php">30 / 30</span></div>
+    <div class="bar hp-p"><i id="phpbar" style="width:100%"></i></div>
+  </div>
+
+  <div class="card log" id="log">Бой начался. Выбери действия и нажми «Ход».</div>
+  <button id="reset" style="width:100%">Начать заново</button>
+
+<script>
+  const ZONES = ["Голова", "Корпус", "Пояс", "Ноги"];
+  const HINT = ["вскидывает морду: метит в голову", "бросается всем телом: метит в корпус", "заходит сбоку: метит в пояс", "пригнулся: метит в ноги"];
+  const HABIT = [0.6, 1, 1.2, 1.6];     // привычки волка: любит низ
+  const REACT = 0.5;                    // реакция на прошлый ход
+  const ACC = 0.65;                     // насколько замах верен (в игре зависело бы от Внимания)
+  let s;
+
+  function fresh() { s = { e: 30, p: 30, last: null, intent: null, hint: null, marks: { struck: -1, blocked: [] }, sel: { strike: null, block: [] } }; nextIntent(); render(); log("Бой начался. Выбери действия и нажми «Ход».", ""); }
+  const roulette = w => { let r = Math.random() * w.reduce((a, b) => a + b, 0); for (let i = 0; i < w.length; i++) { r -= w[i]; if (r < 0) return i; } return w.length - 1; };
+
+  function nextIntent() {
+    // что хочет сделать враг: привычка × реакция на то, где игрок был открыт
+    const w = ZONES.map((_, z) => HABIT[z] * (s.last ? 1 + (s.last.blocks.includes(z) ? -REACT : REACT) : 1));
+    s.intent = roulette(w);
+    // замах: с вероятностью ACC верный, иначе показывает другую зону
+    if (Math.random() < ACC) s.hint = s.intent;
+    else { let z; do { z = Math.floor(Math.random() * 4); } while (z === s.intent); s.hint = z; }
+  }
+
+  function buttons(id, type, limit) {
+    const box = document.getElementById(id); box.innerHTML = "";
+    ZONES.forEach((n, z) => {
+      const b = document.createElement("button"); b.textContent = n;
+      const on = type === "strike" ? s.sel.strike === z : s.sel.block.includes(z);
+      if (on) b.className = type === "strike" ? "on-s" : "on";
+      b.onclick = () => {
+        if (type === "strike") s.sel.strike = z;
+        else { const i = s.sel.block.indexOf(z); if (i >= 0) s.sel.block.splice(i, 1); else { s.sel.block.push(z); if (s.sel.block.length > limit) s.sel.block.shift(); } }
+        render();
+      };
+      box.appendChild(b);
+    });
+  }
+
+  function render() {
+    document.getElementById("ehp").textContent = `${s.e} / 30`;
+    document.getElementById("php").textContent = `${s.p} / 30`;
+    document.getElementById("ehpbar").style.width = (s.e / 30 * 100) + "%";
+    document.getElementById("phpbar").style.width = (s.p / 30 * 100) + "%";
+    ZONES.forEach((_, z) => {
+      const el = document.getElementById("z" + z);
+      el.setAttribute("class", "zone" + (s.marks.struck === z ? " struck" : "") + (s.marks.blocked.includes(z) ? " blocked" : "") + (tele() && s.hint === z && !over() ? " warn" : ""));
+    });
+    document.getElementById("tgl").innerHTML = (tele() && !over()) ? `<div class="telegraph">Волк ${HINT[s.hint]}.<small>Замах верен не всегда: примерно в ${Math.round(ACC * 100)}% случаев.</small></div>` : "";
+    buttons("strike", "strike", 1); buttons("block", "block", 2);
+    document.getElementById("go").disabled = over() || s.sel.strike === null || s.sel.block.length < 2;
+  }
+  const tele = () => document.getElementById("tele").checked;
+  const over = () => s.e <= 0 || s.p <= 0;
+  function log(text, cls) { const d = document.getElementById("log"); d.innerHTML = text.split("\n").map(t => `<div class="${cls}">${t}</div>`).join(""); }
+
+  document.getElementById("go").onclick = () => {
+    const lines = [];
+    // враг закрывает 2 зоны: чаще те, куда ты бил в прошлый ход
+    const bw = ZONES.map((_, z) => 1 + (s.last && s.last.strike === z ? REACT * 2 : 0));
+    const eb = []; const w = [...bw]; for (let n = 0; n < 2; n++) { const i = roulette(w); eb.push(i); w[i] = 0; }
+    const strikeZ = s.sel.strike, blocks = [...s.sel.block];
+    // твой удар
+    if (eb.includes(strikeZ)) lines.push(`<span class="bad">Ты бьёшь в «${ZONES[strikeZ]}», но волк закрыл эту зону.</span>`);
+    else { s.e = Math.max(0, s.e - 8); lines.push(`<span class="good">Ты бьёшь в «${ZONES[strikeZ]}»: попал, −8.</span>`); }
+    // удар врага
+    if (blocks.includes(s.intent)) lines.push(`<span class="good">Волк бьёт в «${ZONES[s.intent]}», ты закрыл эту зону.</span>`);
+    else { s.p = Math.max(0, s.p - 6); lines.push(`<span class="bad">Волк бьёт в «${ZONES[s.intent]}»: −6 тебе.</span>`); }
+    s.marks = { struck: s.intent, blocked: eb };
+    s.last = { strike: strikeZ, blocks };
+    s.sel = { strike: null, block: [] };
+    if (s.e <= 0) lines.push("<b class='good'>Победа!</b>"); else if (s.p <= 0) lines.push("<b class='bad'>Поражение.</b>");
+    else nextIntent();
+    log(lines.join("\n"), "");
+    render();
+  };
+  document.getElementById("tele").onchange = render;
+  document.getElementById("reset").onclick = fresh;
+  fresh();
+</script>
+</body>
+</html>
