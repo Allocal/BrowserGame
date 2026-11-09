@@ -113,7 +113,7 @@
       return {
         loc: e.loc, at: e.at, mana: Number.isFinite(e.mana) ? e.mana : 0, log: typeof e.log === "string" ? e.log : "",
         visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])], defeated: known(e.defeated), acted: e.acted === true, campLock: Number.isFinite(e.campLock) ? Math.max(0, Math.floor(e.campLock)) : 0,
-        encounter: (WILD_ENEMIES[e.encounter?.kind] && loc.points[e.encounter?.to]) ? { kind: e.encounter.kind, to: e.encounter.to, returning: e.encounter.returning === true, resident: e.encounter.resident === true } : null,
+        encounter: (WILD_ENEMIES[e.encounter?.kind] && loc.points[e.encounter?.to]) ? { kind: e.encounter.kind, count: Math.max(1, Math.min(6, Math.floor(Number(e.encounter.count)) || 1)), to: e.encounter.to, returning: e.encounter.returning === true, resident: e.encounter.resident === true } : null,
         loot: { copper: Number.isFinite(e.loot?.copper) ? Math.max(0, e.loot.copper) : 0, items,
           gear: Array.isArray(e.loot?.gear) ? e.loot.gear.map(cleanItem).filter(Boolean) : [] }
       };

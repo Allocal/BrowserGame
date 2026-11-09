@@ -19,6 +19,8 @@
     // drops: шанс (0…1) и количество; copper — множитель к базовой денежной награде уровня.
     // Общий множитель урона диких врагов: ручка сложности, подобрана замерами (при ×1 бои с обычными врагами были почти непроигрываемыми).
     const WILD_DMG_FACTOR = 1.5;
+    // Участник пачки слабее одиночного врага: бой идёт по очереди, и без этого пачка из N была бы в N раз тяжелее одиночки.
+    const PACK_MEMBER = 0.75;
     const WILD_ENEMIES = {
       wolf:   { name: "Волк", gear: "none", hp: 0.8, dmg: 1.4, xp: 1.2, style: { strike: [0.6, 1, 1.2, 1.6], react: 0.4 }, drops: [{ item: "wolfPelt", chance: 0.45, min: 1, max: 1 }] },
       boar:   { name: "Кабан", gear: "none", hp: 1.0, dmg: 1.2, xp: 1.3, style: { strike: [0.7, 1.8, 1, 0.8], react: 0.3 }, drops: [{ item: "boarTusk", chance: 0.4, min: 1, max: 2 }] },
@@ -40,7 +42,7 @@
         start: "edge",
         points: {
           edge:     { name: "Опушка",             x: 50, y: 90, image: "img/forest/path1.jpg", camp: { ambush: 0.15 }, visible: true,  kind: "exit",  text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться в город." },
-          clearing: { name: "Поляна",             x: 24, y: 64, image: "img/forest/path2.jpg", resident: "wolf", visible: true,  kind: "place", text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", respawn: 1, copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
+          clearing: { name: "Поляна",             x: 24, y: 64, image: "img/forest/path2.jpg", resident: "wolf", pack: [2, 3], visible: true,  kind: "place", text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", respawn: 1, copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
           brook:    { name: "Ручей",              x: 76, y: 64, image: "img/forest/path2.jpg", resident: "boar", visible: true,  kind: "place", text: "Быстрый ручей. На влажной земле видны следы зверей.", find: { label: "Поискать у воды", title: "Берег ручья", respawn: 1, copper: [0, 0.4] } },
           oak:      { name: "Старый дуб",         x: 10, y: 40, image: "img/forest/oak.jpg", visible: false, kind: "place", text: "Огромный дуб, в дупле которого кто-то оставил сундучок.", find: { label: "Открыть сундучок", title: "Сундучок в дупле", respawn: 4, copper: [1.0, 2.5], rareBoost: 4 } },
           hut:      { name: "Заброшенная сторожка", x: 44, y: 30, image: "img/forest/tower.jpg", resident: "bandit", visible: false, kind: "place", camp: { ambush: 0.45 }, text: "Покосившаяся сторожка лесника. Давно никто не заходил.", find: { label: "Обыскать сторожку", title: "Сторожка", respawn: 2, copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7,
@@ -58,6 +60,7 @@
       const key = LOCATIONS[exp.loc].points[id].resident;
       return key && !exp.defeated.includes(id) ? key : null;
     };
+    const foeLabel = enc => WILD_ENEMIES[enc.kind].name + (enc.count > 1 ? ` ×${enc.count}` : "");
     const pickRandom = list => list[Math.floor(Math.random() * list.length)];
     const nightAttackerOf = (exp, loc) => {
       const pool = [...loc.wanderers];
@@ -210,7 +213,7 @@
       encBox.hidden = !exp.encounter;
       if (exp.encounter) {
         const resident = exp.encounter.resident;
-        const foeName = WILD_ENEMIES[exp.encounter.kind].name;
+        const foeName = foeLabel(exp.encounter);
         encBox.appendChild(infoCard({ icon: "sword", title: resident ? `${loc.points[exp.encounter.to].name}: ${foeName}` : `Впереди: ${foeName}`, sub: resident ? "Он здесь обитает и тебя пока не заметил. Что делаешь?" : "Он тебя не заметил. Что делаешь?", cls: "promo-card",
           buttons: [makeButton("Напасть первым", () => resolveEncounter("strike")),
             makeButton(`Пройти незамеченным (${sneakChanceOf(p)}%)`, () => resolveEncounter("sneak")),
@@ -351,13 +354,14 @@
       const enc = exp.encounter;
       if (!enc) return;
       exp.encounter = null;
-      const name = WILD_ENEMIES[enc.kind].name;
+      const name = foeLabel(enc);
+      const kinds = Array(enc.count ?? 1).fill(enc.kind);
       const proceed = () => { exp.returning = enc.returning; arriveAt(enc.to); }; // после боя или удачного обхода идём дальше к цели
       const markSlain = () => { exp.defeated.push(enc.to); }; // убитый обитатель не появляется до конца вылазки и возвращается по времени
       const won = enc.resident ? () => { markSlain(); proceed(); } : proceed;
       const drawOpts = enc.resident ? { onDraw: markSlain } : {};
       if (choice === "strike") {
-        startWildFight(enc.kind, `Ты напал первым: ${name} не ждал тебя.`, won, { surprise: true, ...drawOpts });
+        startWildFight(kinds, `Ты напал первым: ${name} не ждал тебя.`, won, { surprise: true, ...drawOpts });
         return;
       }
       if (choice === "sneak") {
@@ -366,7 +370,7 @@
           proceed();
           return;
         }
-        startWildFight(enc.kind, `Тебя заметили: ${name} бросается на тебя, враг бьёт сильнее.`, won, { dmgBonus: SNEAK.failDmgBonus, ...drawOpts });
+        startWildFight(kinds, `Тебя заметили: ${name} бросается на тебя, враг бьёт сильнее.`, won, { dmgBonus: SNEAK.failDmgBonus, ...drawOpts });
         return;
       }
       setExpLog(enc.resident ? "Ты передумал идти туда и остался на месте." : `Ты затаился, и ${name} ушёл своей дорогой. Придётся идти к цели заново.`);
@@ -381,8 +385,10 @@
       if (exp.campLock > 0) exp.campLock -= 1; // каждый переход приближает следующую стоянку
       const resident = residentAlive(exp, id);
       if (resident) {
-        exp.encounter = { kind: resident, to: id, returning: Boolean(exp.returning), resident: true };
-        setExpLog(`В месте «${name}» обитает ${WILD_ENEMIES[resident].name}.`);
+        const spec = loc.points[id].pack;
+        const count = spec ? Math.floor(rand(spec[0], spec[1] + 0.999)) : 1;
+        exp.encounter = { kind: resident, count, to: id, returning: Boolean(exp.returning), resident: true };
+        setExpLog(`В месте «${name}» обитает ${foeLabel(exp.encounter)}.`);
         showExpedition();
         return;
       }
@@ -454,13 +460,13 @@
       showExpedition();
     }
 
-    function makeWildEnemy(kind, level, dmgBonus = 1) { // dmgBonus: множитель урона врага (ночное нападение), обычно 1
+    function makeWildEnemy(kind, level, dmgBonus = 1, scale = 1) { // dmgBonus: множитель урона врага (ночное нападение), обычно 1; scale: общая сила (участник пачки)
       const t = WILD_ENEMIES[kind];
       const L = Math.max(1, level);
       const base = arenaFighterStats(L).dmg;
       return {
-        name: t.name, style: t.style, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp), magicResist: Math.floor(0.4 * L),
-        dmg: [Math.round(base[0] * t.dmg * WILD_DMG_FACTOR * dmgBonus), Math.round(base[1] * t.dmg * WILD_DMG_FACTOR * dmgBonus)],
+        name: t.name, style: t.style, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp * scale), magicResist: Math.floor(0.4 * L),
+        dmg: [Math.round(base[0] * t.dmg * WILD_DMG_FACTOR * dmgBonus * scale), Math.round(base[1] * t.dmg * WILD_DMG_FACTOR * dmgBonus * scale)],
         armor: t.armored ? [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)] : null
       };
     }
@@ -494,24 +500,31 @@
     function startWildFight(kind, introText, onWin, opts = {}) {
       const p = journey.player;
       const exp = journey.expedition;
-      const def = makeWildEnemy(kind, p.level, opts.dmgBonus ?? 1);
-      const t = WILD_ENEMIES[kind];
-      const xp = Math.max(1, Math.round(arenaBaseXp(p.level) * t.xp));
+      const kinds = [].concat(kind); // одиночный враг приходит строкой, пачка массивом
+      const foes = kinds.map(k => createEnemy(makeWildEnemy(k, p.level, opts.dmgBonus ?? 1, kinds.length > 1 ? PACK_MEMBER : 1)));
+      const bot = foes[0];
+      const reserve = foes.slice(1);
+      const t = WILD_ENEMIES[kinds[0]];
+      const xp = kinds.reduce((sum, k) => sum + Math.max(1, Math.round(arenaBaseXp(p.level) * WILD_ENEMIES[k].xp)), 0);
       const fighter = { ...p, name: `${p.name} (ур. ${p.level})`, startMana: Math.min(exp.mana, p.maxMana) }; // мана между боями вылазки не возвращается
-      const bot = createEnemy(def);
       if (opts.surprise) bot.surprised = 1; // враг пропускает первый ход (см. playTurn)
       exp.acted = true;
       saveGame("capital");
-      startBattle(fighter, bot, introText, `Вылазка: ${t.name}`, outcome => {
+      startBattle(fighter, bot, introText, `Вылазка: ${t.name}` + (kinds.length > 1 ? ` и ещё ${kinds.length - 1}` : ""), outcome => {
         recordFight("wild", outcome);
         exp.mana = fighter.mana ?? exp.mana;
         if (outcome === "win") {
           p.health = fighter.health;
           grantRewards(xp, 0);
-          const drops = rollDrops(kind, p.level);
+          const drops = { copper: 0, items: {} };
+          kinds.forEach(k => {
+            const d = rollDrops(k, p.level);
+            drops.copper += d.copper;
+            for (const item in d.items) drops.items[item] = (drops.items[item] ?? 0) + d.items[item];
+          });
           addLoot(exp, drops.copper, drops.items);
           const dropText = (drops.copper > 0 || Object.keys(drops.items).length) ? `, добыча: ${lootText(drops)}` : ", добычи нет";
-          exp.log = `Победа над врагом «${t.name}»: опыт +${xp}${dropText}.`;
+          exp.log = `${kinds.length > 1 ? "Победа над пачкой: " + kinds.map(k => WILD_ENEMIES[k].name).join(", ") : `Победа над врагом «${t.name}»`}: опыт +${xp}${dropText}.`;
           saveGame("capital");
           el("result").textContent = `Победа! опыт +${xp}${dropText}` + (journey.levelsGained > 0 ? ". Новый уровень!" : "");
           el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
@@ -522,7 +535,7 @@
           if (outcome === "draw") opts.onDraw?.(); // ничья: враг тоже упал
           showAfterButton("Очнуться в городе", expeditionDefeat);
         }
-      });
+      }, reserve);
       el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
     }
 
