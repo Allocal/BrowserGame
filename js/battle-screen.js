@@ -292,8 +292,20 @@
     // onFinish(outcome) решает, что показать после боя: в тренировке и в путешествии это разные кнопки.
     let onBattleFinish = null;
 
-    function startBattle(player, bot, introText, progressText, finishHandler) {
-      game = createGame(player, bot);
+    const armorLine = g => (g.armor.some(a => a > 0) ? ` · броня: ${g.armor.join("/")}` : "");
+    const dodgeLine = c => (c.dodge > 0 ? ` · уклонение: ${c.dodge}%` : "");
+
+    // Рисует врага целиком; вызывается в начале боя и когда на смену упавшему выходит следующий.
+    function showBot(bot) {
+      el("bot-name").textContent = bot.name;
+      el("bot-max").textContent = bot.maxHealth;
+      el("bot-gear-name").textContent = `${bot.gear.name} · урон за удар: ${damageText(bot)}${armorLine(bot.gear)}${dodgeLine(bot)}`;
+      el("bot-figure").innerHTML = figureSvg(bot.gear, true);
+      el("bot-queue").textContent = game.reserve.length ? `ещё врагов в очереди: ${game.reserve.length}` : "";
+    }
+
+    function startBattle(player, bot, introText, progressText, finishHandler, reserve = []) {
+      game = createGame(player, bot, reserve);
       skillArmed = false;
       setAuto(false);
       onBattleFinish = finishHandler;
@@ -307,15 +319,10 @@
       el("battle-intro").textContent = introText;
       el("battle-progress").textContent = progressText;
       el("player-name").textContent = player.name;
-      el("bot-name").textContent = bot.name;
       el("player-max").textContent = player.maxHealth;
-      el("bot-max").textContent = bot.maxHealth;
-      const armorLine = g => (g.armor.some(a => a > 0) ? ` · броня: ${g.armor.join("/")}` : "");
-      const dodgeLine = c => (c.dodge > 0 ? ` · уклонение: ${c.dodge}%` : "");
       el("player-gear-name").textContent = `${player.gear.name} · ` + (player.spellDamage ? `заклинание: урон ${rangeText(player.spellDamage)}, мана −${SPELL.cost}; без маны удар ${damageText(player)}` : `урон за удар: ${damageText(player)}`) + `${armorLine(player.gear)}${dodgeLine(player)}`;
-      el("bot-gear-name").textContent = `${bot.gear.name} · урон за удар: ${damageText(bot)}${armorLine(bot.gear)}${dodgeLine(bot)}`;
       el("player-figure").innerHTML = figureSvg(player.gear, false);
-      el("bot-figure").innerHTML = figureSvg(bot.gear, true);
+      showBot(bot);
       showScreen("battle");
       refreshHealth();
       refreshSelection();
@@ -331,8 +338,15 @@
       flashTurn(turnResult);
 
       const outcome = getOutcome(game);
-      if (outcome) {
+      if (outcome === "win" && game.reserve.length > 0) {
+        const fallen = game.bot.name;
+        const next = nextBot(game);
+        addLogLine(`${fallen} падает. На его место выходит ${next.name}.`, "info");
+        showBot(next);
+        refreshHealth();
+      } else if (outcome) {
         game.over = true;
+        setAuto(false);
         el("result").textContent = {
           win: "Победа!",
           lose: "Поражение.",

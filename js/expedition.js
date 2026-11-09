@@ -7,7 +7,10 @@
       lookEncounterChance: 0.2, // шанс встречи, пока осматриваешься
       revealChance: 0.6,       // шанс найти скрытую точку по соседству
       defeatHealthShare: 0.3,  // с каким здоровьем герой очнётся в городе после поражения
-      campCooldown: 2          // сколько переходов между точками нужно после стоянки, чтобы встать снова
+      campCooldown: 2,         // сколько переходов между точками нужно после стоянки, чтобы встать снова
+      campAmbush: 0.30,        // шанс ночного нападения, если у точки нет своего числа (camp.ambush)
+      walkedFactor: 0.4,       // во сколько раз реже встречи в пути, когда идёшь на уже посещённое место
+      respawnMs: 10 * 60 * 1000 // через сколько после конца вылазки убитые обитатели возвращаются (как полное восстановление здоровья)
     };
 
     // Враги вылазок. hp и dmg — множители к бойцу арены того же уровня (у зверя один удар, поэтому dmg выше).
@@ -24,36 +27,64 @@
     };
 
     // Точки места. links — тропы (в обе стороны); visible — видна с начала; kind: exit — выход в город.
-    // first — событие при первом приходе в вылазке: fight (бой).
+    // resident — ключ врага из WILD_ENEMIES, который живёт в точке, пока его не убьют (список убитых — exp.defeated).
     // find — находка, которую игрок открывает кнопкой; copper — множитель к базовой награде;
     // respawn — через сколько вылазок после открытия здесь снова появится добыча.
     const LOCATIONS = {
       forest: {
         name: "Тёмный лес",
         intro: "За городскими воротами начинается лес. Тропы расходятся в разные стороны, и не все их видно сразу.",
-        encounters: ["wolf", "wolf", "boar", "bandit"],
+        // Бродячие звери встречаются где угодно; посыльные приходят ночью к лагерю, только пока живы в своём логове (враг: точка).
+        wanderers: ["wolf", "wolf", "boar"],
+        raiders: { bandit: "hut" },
         start: "edge",
         points: {
-          edge:     { name: "Опушка",             x: 50, y: 90, visible: true,  kind: "exit",  text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться в город." },
-          clearing: { name: "Поляна",             x: 24, y: 64, visible: true,  kind: "place", camp: { ambush: 0.30 }, text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", respawn: 1, copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
-          brook:    { name: "Ручей",              x: 76, y: 64, visible: true,  kind: "place", text: "Быстрый ручей. На влажной земле видны следы зверей.", find: { label: "Поискать у воды", title: "Берег ручья", respawn: 1, copper: [0, 0.4] } },
-          oak:      { name: "Старый дуб",         x: 10, y: 40, visible: false, kind: "place", text: "Огромный дуб, в дупле которого кто-то оставил сундучок.", find: { label: "Открыть сундучок", title: "Сундучок в дупле", respawn: 4, copper: [1.0, 2.5], rareBoost: 4 } },
-          hut:      { name: "Заброшенная сторожка", x: 44, y: 30, visible: false, kind: "place", camp: { ambush: 0.45 }, text: "Покосившаяся сторожка лесника. Давно никто не заходил.", find: { label: "Обыскать сторожку", title: "Сторожка", respawn: 2, copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7,
+          edge:     { name: "Опушка",             x: 50, y: 90, image: "img/forest/path1.jpg", camp: { ambush: 0.15 }, visible: true,  kind: "exit",  text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться в город." },
+          clearing: { name: "Поляна",             x: 24, y: 64, image: "img/forest/path2.jpg", resident: "wolf", visible: true,  kind: "place", text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", respawn: 1, copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
+          brook:    { name: "Ручей",              x: 76, y: 64, image: "img/forest/path2.jpg", resident: "boar", visible: true,  kind: "place", text: "Быстрый ручей. На влажной земле видны следы зверей.", find: { label: "Поискать у воды", title: "Берег ручья", respawn: 1, copper: [0, 0.4] } },
+          oak:      { name: "Старый дуб",         x: 10, y: 40, image: "img/forest/oak.jpg", visible: false, kind: "place", text: "Огромный дуб, в дупле которого кто-то оставил сундучок.", find: { label: "Открыть сундучок", title: "Сундучок в дупле", respawn: 4, copper: [1.0, 2.5], rareBoost: 4 } },
+          hut:      { name: "Заброшенная сторожка", x: 44, y: 30, image: "img/forest/tower.jpg", resident: "bandit", visible: false, kind: "place", camp: { ambush: 0.45 }, text: "Покосившаяся сторожка лесника. Давно никто не заходил.", find: { label: "Обыскать сторожку", title: "Сторожка", respawn: 2, copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7,
             gear: { chance: 0.35, rarity: { common: 70, uncommon: 25, rare: 5 } } } },
-          wolfpath: { name: "Волчья тропа",       x: 76, y: 20, visible: false, kind: "place", text: "Тропа, вытоптанная лапами. Здесь живёт вожак стаи.", first: { type: "fight", enemy: "leader" } }
+          wolfpath: { name: "Волчья тропа",       x: 76, y: 20, image: "img/forest/path1.jpg", resident: "leader", visible: false, kind: "place", text: "Тропа, вытоптанная лапами. Здесь живёт вожак стаи." }
         },
         links: [["edge", "clearing"], ["edge", "brook"], ["clearing", "oak"], ["clearing", "hut"], ["brook", "wolfpath"], ["hut", "wolfpath"]]
       }
     };
 
     // Данные вылазки хранятся в journey.expedition: { loc, at, visible[], visited[], loot{copper, items}, mana, log }.
+    const campSpecOf = pt => pt.camp ?? { ambush: EXPEDITION.campAmbush };
+    // Ключ врага, если он ещё живёт в точке; иначе null.
+    const residentAlive = (exp, id) => {
+      const key = LOCATIONS[exp.loc].points[id].resident;
+      return key && !exp.defeated.includes(id) ? key : null;
+    };
+    const pickRandom = list => list[Math.floor(Math.random() * list.length)];
+    const nightAttackerOf = (exp, loc) => {
+      const pool = [...loc.wanderers];
+      for (const kind in loc.raiders) if (residentAlive(exp, loc.raiders[kind]) === kind) pool.push(kind);
+      return pickRandom(pool);
+    };
     const neighborsOf = (loc, id) => loc.links.filter(l => l.includes(id)).map(l => (l[0] === id ? l[1] : l[0]));
     const rand = (a, b) => a + Math.random() * (b - a);
     let capitalNote = "";
     let afterLevelUp = null;
 
     // Вылазка засчитывается, только если в ней был бой или находка: выйти и сразу вернуться откаты не двигает.
-    function finishTrip(exp) { if (exp.acted) worldState().trips += 1; }
+    // Подземелье не меняется: после первой настоящей вылазки (даже закончившейся поражением) карта известна целиком.
+    function finishTrip(exp) {
+      if (!exp.acted) return;
+      const world = worldState();
+      world.trips += 1;
+      (world.known ??= {})[exp.loc] = true;
+      const slain = ((world.slain ??= {})[exp.loc] ??= {});
+      exp.defeated.forEach(id => { slain[id] = Date.now(); });
+    }
+
+    // Точки, где обитатели убиты недавно и ещё не вернулись. Время считаем по отметке, поэтому это работает и пока игра закрыта.
+    const slainOf = locKey => {
+      const slain = worldState().slain?.[locKey] ?? {};
+      return Object.keys(slain).filter(id => { const age = Date.now() - slain[id]; return age >= 0 && age < EXPEDITION.respawnMs; });
+    };
 
     function startExpedition(locKey) {
       const p = journey.player;
@@ -62,8 +93,8 @@
         syncRegen(p);
         journey.expedition = {
           loc: locKey, at: loc.start, mana: p.maxMana, log: loc.intro,
-          visible: Object.keys(loc.points).filter(k => loc.points[k].visible),
-          visited: [loc.start], acted: false, campLock: 0, encounter: null, loot: { copper: 0, items: {}, gear: [] }
+          visible: worldState().known?.[locKey] ? Object.keys(loc.points) : Object.keys(loc.points).filter(k => loc.points[k].visible),
+          visited: [loc.start], defeated: slainOf(locKey), acted: false, campLock: 0, encounter: null, loot: { copper: 0, items: {}, gear: [] }
         };
         saveGame("capital");
       }
@@ -120,40 +151,50 @@
       exp.returning = false;
       el("exp-title").textContent = `${loc.name}: ${here.name}`;
       el("exp-text").textContent = here.text;
+      const scene = el("exp-scene");
+      scene.hidden = !here.image;
+      if (here.image) scene.src = here.image;
       const extra = [chip(`Добыча: ${lootText(exp.loot)}`, "gold", "bag")];
       if (p.maxMana > 0) extra.push(chip(`Мана ${Math.min(exp.mana, p.maxMana)} / ${p.maxMana}`, "blue", "flask"));
       setStatus("exp-status", p, extra);
       el("exp-map").innerHTML = mapSvg(exp, loc);
       el("exp-log").textContent = exp.log ?? "";
 
-      const findBox = el("exp-find");
-      findBox.replaceChildren();
+      const findBtn = el("exp-find-btn");
+      findBtn.hidden = !here.find;
       if (here.find) {
         const ready = findReady(exp, exp.at);
-        findBox.appendChild(infoCard({ icon: "bag", title: here.find.title,
-          sub: ready ? "Здесь есть что осмотреть." : "Пусто. Ты уже забрал отсюда всё, что было.",
-          cls: ready ? "promo-card" : "", buttons: ready ? [makeButton(here.find.label, () => openFind(exp.at))] : [] }));
+        findBtn.textContent = ready ? here.find.label : `${here.find.title}: пусто`;
+        findBtn.disabled = !ready;
+        findBtn.onclick = () => openFind(exp.at);
       }
 
-      if (here.camp) {
-        const kit = hasKit(p);
-        const locked = exp.campLock > 0;
-        const rested = p.health >= p.maxHealth && exp.mana >= p.maxMana;
-        const sub = !kit ? "Нужны огниво и спальник: они продаются в городском магазине."
-          : locked ? `Ты недавно отдыхал. Нужно ещё переходов: ${exp.campLock}.`
-          : rested ? "Ты полон сил, отдыхать незачем."
-          : "Можно развести костёр и переночевать: здоровье и мана восстановятся.";
-        findBox.appendChild(infoCard({ icon: "bed", title: "Лагерь", sub, cls: kit && !locked && !rested ? "promo-card" : "",
-          buttons: [makeButton("Разбить лагерь", makeCamp, !kit || locked || rested)] }));
-      }
+      const campBtn = el("exp-camp-btn");
+      campBtn.hidden = false;
+      const guarded = residentAlive(exp, exp.at);
+      const kit = hasKit(p);
+      const locked = exp.campLock > 0;
+      const rested = p.health >= p.maxHealth && exp.mana >= p.maxMana;
+      campBtn.textContent = guarded ? "Лагерь: здесь обитает враг"
+        : !kit ? "Лагерь: нужны огниво и спальник"
+        : locked ? `Лагерь: ещё переходов — ${exp.campLock}`
+        : rested ? "Лагерь: ты полон сил"
+        : "Разбить лагерь";
+      campBtn.disabled = Boolean(guarded) || !kit || locked || rested;
+      campBtn.onclick = makeCamp;
 
-      const moves = el("exp-moves");
-      moves.replaceChildren();
+      const arrows = el("exp-arrows");
+      arrows.replaceChildren();
       neighborsOf(loc, exp.at).filter(id => exp.visible.includes(id)).forEach(id => {
         const pt = loc.points[id];
-        const seen = exp.visited.includes(id);
-        moves.appendChild(infoCard({ icon: "tree", title: pt.name, sub: seen ? "Ты здесь уже бывал." : "Не исследовано.", cls: seen ? "" : "promo-card",
-          buttons: [makeButton("Идти", () => travelTo(id))] }));
+        const dx = pt.x - here.x, dy = pt.y - here.y;
+        const len = Math.hypot(dx, dy);
+        const foe = residentAlive(exp, id) ? WILD_ENEMIES[pt.resident].name : "";
+        const btn = makeButton(foe ? `${pt.name} · ${foe}` : pt.name, () => travelTo(id));
+        btn.className = `arrow${exp.visited.includes(id) ? " seen" : ""}${foe ? " danger" : ""}`;
+        btn.style.left = `${50 + dx / len * 38}%`;
+        btn.style.top = `${50 + dy / len * 26}%`;
+        arrows.appendChild(btn);
       });
       const hasHidden = neighborsOf(loc, exp.at).some(id => !exp.visible.includes(id));
       el("exp-look-btn").disabled = !hasHidden;
@@ -164,12 +205,19 @@
       el("exp-look-btn").hidden = false;
       el("exp-home-hint").textContent = way.length ? "Дорога домой идёт через Опушку, по пути возможны встречи." : "";
       // Замеченный враг: вместо обычных действий — выбор, пока он не сделан, ничего другого нельзя.
+      const encBox = el("exp-encounter");
+      encBox.replaceChildren();
+      encBox.hidden = !exp.encounter;
       if (exp.encounter) {
-        findBox.replaceChildren(infoCard({ icon: "sword", title: `Впереди: ${WILD_ENEMIES[exp.encounter.kind].name}`, sub: "Он тебя не заметил. Что делаешь?", cls: "promo-card",
+        const resident = exp.encounter.resident;
+        const foeName = WILD_ENEMIES[exp.encounter.kind].name;
+        encBox.appendChild(infoCard({ icon: "sword", title: resident ? `${loc.points[exp.encounter.to].name}: ${foeName}` : `Впереди: ${foeName}`, sub: resident ? "Он здесь обитает и тебя пока не заметил. Что делаешь?" : "Он тебя не заметил. Что делаешь?", cls: "promo-card",
           buttons: [makeButton("Напасть первым", () => resolveEncounter("strike")),
             makeButton(`Пройти незамеченным (${sneakChanceOf(p)}%)`, () => resolveEncounter("sneak")),
-            makeButton("Переждать", () => resolveEncounter("wait"))] }));
-        moves.replaceChildren();
+            makeButton(resident ? "Передумать" : "Переждать", () => resolveEncounter("wait"))] }));
+        arrows.replaceChildren();
+        findBtn.hidden = true;
+        campBtn.hidden = true;
         el("exp-look-btn").hidden = true;
         el("exp-home-btn").hidden = true;
         el("exp-home-hint").textContent = "";
@@ -203,8 +251,8 @@
       const p = journey.player;
       const exp = journey.expedition;
       const loc = LOCATIONS[exp.loc];
-      const spec = loc.points[exp.at].camp;
-      if (!spec || exp.campLock > 0 || !hasKit(p)) return;
+      if (residentAlive(exp, exp.at) || exp.campLock > 0 || !hasKit(p)) return;
+      const spec = campSpecOf(loc.points[exp.at]);
       const night = rollCampNight(p, spec);
       const signsNote = night.signs ? "Ты заметил свежие следы и устроился осторожно. " : "";
       if (!night.ambush) {
@@ -212,7 +260,7 @@
         showExpedition();
         return;
       }
-      const kind = loc.encounters[Math.floor(Math.random() * loc.encounters.length)];
+      const kind = nightAttackerOf(exp, loc);
       startWildFight(kind, `${signsNote}Среди ночи на лагерь нападают, враг бьёт сильнее: ты не успел собраться.`, () => {
         restAtCamp(p, exp, `${exp.log} Остаток ночи прошёл спокойно: ты полностью отдохнул.`);
         showExpedition();
@@ -305,20 +353,23 @@
       exp.encounter = null;
       const name = WILD_ENEMIES[enc.kind].name;
       const proceed = () => { exp.returning = enc.returning; arriveAt(enc.to); }; // после боя или удачного обхода идём дальше к цели
+      const markSlain = () => { exp.defeated.push(enc.to); }; // убитый обитатель не появляется до конца вылазки и возвращается по времени
+      const won = enc.resident ? () => { markSlain(); proceed(); } : proceed;
+      const drawOpts = enc.resident ? { onDraw: markSlain } : {};
       if (choice === "strike") {
-        startWildFight(enc.kind, `Ты напал первым: ${name} не ждал тебя.`, proceed, { surprise: true });
+        startWildFight(enc.kind, `Ты напал первым: ${name} не ждал тебя.`, won, { surprise: true, ...drawOpts });
         return;
       }
       if (choice === "sneak") {
         if (Math.random() * 100 < sneakChanceOf(journey.player)) {
-          setExpLog(`Ты прокрался мимо: ${name} тебя не заметил.`);
+          setExpLog(enc.resident ? `Ты прокрался на место: ${name} тебя не заметил.` : `Ты прокрался мимо: ${name} тебя не заметил.`);
           proceed();
           return;
         }
-        startWildFight(enc.kind, `Тебя заметили: ${name} бросается на тебя, враг бьёт сильнее.`, proceed, { dmgBonus: SNEAK.failDmgBonus });
+        startWildFight(enc.kind, `Тебя заметили: ${name} бросается на тебя, враг бьёт сильнее.`, won, { dmgBonus: SNEAK.failDmgBonus, ...drawOpts });
         return;
       }
-      setExpLog(`Ты затаился, и ${name} ушёл своей дорогой. Придётся идти к цели заново.`);
+      setExpLog(enc.resident ? "Ты передумал идти туда и остался на месте." : `Ты затаился, и ${name} ушёл своей дорогой. Придётся идти к цели заново.`);
       showExpedition();
     }
 
@@ -328,10 +379,17 @@
       const name = loc.points[id].name;
       setExpLog("");
       if (exp.campLock > 0) exp.campLock -= 1; // каждый переход приближает следующую стоянку
-      if (Math.random() < EXPEDITION.encounterChance) {
+      const resident = residentAlive(exp, id);
+      if (resident) {
+        exp.encounter = { kind: resident, to: id, returning: Boolean(exp.returning), resident: true };
+        setExpLog(`В месте «${name}» обитает ${WILD_ENEMIES[resident].name}.`);
+        showExpedition();
+        return;
+      }
+      if (Math.random() < EXPEDITION.encounterChance * (exp.visited.includes(id) ? EXPEDITION.walkedFactor : 1)) {
         const roll = Math.random();
         if (roll < 0.6) { // встреча с врагом
-          const kind = loc.encounters[Math.floor(Math.random() * loc.encounters.length)];
+          const kind = pickRandom(loc.wanderers);
           // Внимание: с шансом watchChanceOf враг замечен раньше, чем он заметил героя, и герой выбирает, что делать.
           if (Math.random() * 100 < watchChanceOf(journey.player)) {
             exp.encounter = { kind, to: id, returning: Boolean(exp.returning) };
@@ -366,12 +424,6 @@
       if (exp.log) notes.push(exp.log);
       if (newly.length) notes.push(`Ты заметил новые места: ${newly.join(", ")}.`);
       exp.log = notes.join(" ");
-      if (firstTime && pt.first) {
-        if (pt.first.type === "fight") {
-          startWildFight(pt.first.enemy, `${pt.name}: ты не один.`, () => { showExpedition(); });
-          return;
-        }
-      }
       if (exp.returning) { // продолжаем путь домой
         const next = pathHome(exp, loc)[0];
         if (next) { travelTo(next); return; }
@@ -393,7 +445,7 @@
       const loc = LOCATIONS[exp.loc];
       setExpLog("");
       if (Math.random() < EXPEDITION.lookEncounterChance) {
-        const kind = loc.encounters[Math.floor(Math.random() * loc.encounters.length)];
+        const kind = pickRandom(loc.wanderers);
         startWildFight(kind, "Пока ты осматривался, кто-то подкрался.", () => showExpedition());
         return;
       }
@@ -467,6 +519,7 @@
             if (journey.levelsGained > 0) { afterLevelUp = onWin; showLevelUp(); } else onWin();
           });
         } else {
+          if (outcome === "draw") opts.onDraw?.(); // ничья: враг тоже упал
           showAfterButton("Очнуться в городе", expeditionDefeat);
         }
       });

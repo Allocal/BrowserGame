@@ -73,21 +73,25 @@
   </section>
 
   <section id="expedition" hidden>
-    <div class="story-card">
-      <h2 id="exp-title"></h2>
-      <p id="exp-text"></p>
-    </div>
-    <div id="exp-status" class="status"></div>
-    <div id="exp-map" class="exp-map"></div>
-    <p id="exp-log" class="effect"></p>
-    <div id="exp-find" class="cards"></div>
-    <div class="section-title">Куда идти</div>
-    <div id="exp-moves" class="cards"></div>
-    <p id="exp-home-hint" class="muted"></p>
-    <div class="actions">
-      <button id="exp-look-btn">Осмотреться</button>
-      <button id="exp-hero-btn">Герой и рюкзак</button>
-      <button id="exp-home-btn" class="primary">Вернуться в город</button>
+    <div id="forest-scene" class="scene">
+      <img id="exp-scene" class="exp-scene" alt="" hidden>
+      <div id="exp-arrows"></div>
+      <div class="scene-top">
+        <h2 id="exp-title"></h2>
+        <p id="exp-text"></p>
+        <div id="exp-status" class="status"></div>
+        <p id="exp-log" class="effect"></p>
+      </div>
+      <div id="exp-map" class="exp-map"></div>
+      <div id="exp-encounter" class="exp-encounter" hidden></div>
+      <div class="scene-bottom actions">
+        <button id="exp-find-btn" hidden></button>
+        <button id="exp-camp-btn" hidden></button>
+        <button id="exp-look-btn">Осмотреться</button>
+        <button id="exp-hero-btn">Герой и рюкзак</button>
+        <button id="exp-home-btn" class="primary">Вернуться в город</button>
+        <span id="exp-home-hint" class="muted"></span>
+      </div>
     </div>
   </section>
 
@@ -157,7 +161,7 @@
 
   <section id="teacher" hidden>
     <div class="story-card">
-      <h2>Учитель воинов</h2>
+      <h2>Учитель</h2>
       <p id="teacher-text"></p>
       <p id="teacher-result" class="effect"></p>
     </div>
@@ -222,6 +226,7 @@
       </div>
       <div class="fighter">
         <div><span id="bot-name"></span>: <span id="bot-health"></span> / <span id="bot-max"></span></div>
+        <div id="bot-queue" class="muted"></div>
         <div class="bar"><div id="bot-bar" class="fill"></div></div>
         <div id="bot-figure" class="figure"></div>
         <div id="bot-gear-name"></div>

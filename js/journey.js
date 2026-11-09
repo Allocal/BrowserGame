@@ -112,15 +112,24 @@
       const start = Object.keys(loc.points).filter(k => loc.points[k].visible);
       return {
         loc: e.loc, at: e.at, mana: Number.isFinite(e.mana) ? e.mana : 0, log: typeof e.log === "string" ? e.log : "",
-        visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])], acted: e.acted === true, campLock: Number.isFinite(e.campLock) ? Math.max(0, Math.floor(e.campLock)) : 0,
-        encounter: (WILD_ENEMIES[e.encounter?.kind] && loc.points[e.encounter?.to]) ? { kind: e.encounter.kind, to: e.encounter.to, returning: e.encounter.returning === true } : null,
+        visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])], defeated: known(e.defeated), acted: e.acted === true, campLock: Number.isFinite(e.campLock) ? Math.max(0, Math.floor(e.campLock)) : 0,
+        encounter: (WILD_ENEMIES[e.encounter?.kind] && loc.points[e.encounter?.to]) ? { kind: e.encounter.kind, to: e.encounter.to, returning: e.encounter.returning === true, resident: e.encounter.resident === true } : null,
         loot: { copper: Number.isFinite(e.loot?.copper) ? Math.max(0, e.loot.copper) : 0, items,
           gear: Array.isArray(e.loot?.gear) ? e.loot.gear.map(cleanItem).filter(Boolean) : [] }
       };
     }
 
     function cleanWorld(w) {
-      const out = { trips: Number.isFinite(w?.trips) ? Math.max(0, Math.floor(w.trips)) : 0, opened: {} };
+      const out = { trips: Number.isFinite(w?.trips) ? Math.max(0, Math.floor(w.trips)) : 0, opened: {}, known: {} };
+      for (const k in (w?.known ?? {})) if (LOCATIONS[k] && w.known[k] === true) out.known[k] = true;
+      const now = Date.now();
+      for (const k in (w?.slain ?? {})) {
+        if (!LOCATIONS[k]) continue;
+        for (const id in w.slain[k]) {
+          const age = now - w.slain[k][id];
+          if (LOCATIONS[k].points[id] && Number.isFinite(age) && age >= 0 && age < EXPEDITION.respawnMs) ((out.slain ??= {})[k] ??= {})[id] = w.slain[k][id];
+        }
+      }
       for (const k in (w?.opened ?? {})) if (Number.isFinite(w.opened[k])) out.opened[k] = w.opened[k];
       return out;
     }

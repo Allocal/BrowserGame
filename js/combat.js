@@ -1,10 +1,20 @@
     // ======================= ЛОГИКА БОЯ (не знает про экран) =======================
-    function createGame(player, bot) {
+    const freshSeen = () => ({ strikes: ZONES.map(() => 0), blocks: ZONES.map(() => 0) });
+
+    function createGame(player, bot, reserve = []) {
       player.mana = player.startMana ?? player.maxMana ?? 0; // мана в бою полная, кроме вылазки: там остаток от прошлых боёв
       // last — что игрок делал в прошлом ходу (враг на это реагирует); seen — сколько раз враг бил и блокировал каждую зону (для автопилота).
       // skill — умение в слоте и его перезарядка (cd — сколько ходов ещё недоступно); у ботов и диких врагов его нет.
-      return { player, bot, turn: 0, over: false, last: null, seen: { strikes: ZONES.map(() => 0), blocks: ZONES.map(() => 0) },
+      // reserve — очередь врагов, которые выходят по одному, когда упал предыдущий (стая, шайка).
+      return { player, bot, reserve, turn: 0, over: false, last: null, seen: freshSeen(),
                skill: player.skills?.equipped ? { key: player.skills.equipped, cd: 0 } : null };
+    }
+
+    // Следующий враг выходит вместо упавшего: автопилот изучает его привычки заново, а здоровье героя, мана и перезарядка умения остаются.
+    function nextBot(game) {
+      game.bot = game.reserve.shift();
+      game.seen = freshSeen();
+      return game.bot;
     }
 
     function skillReady(game) {
