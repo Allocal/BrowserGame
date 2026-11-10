@@ -31,7 +31,7 @@
 
     const sumFights = f => ({ wins: f.wins, losses: f.losses, draws: f.draws, all: f.wins + f.losses + f.draws });
 
-    // Склонение по числу: 1 вылазку, 2 вылазки, 5 вылазок.
+    // Склонение по числу: 1 минуту, 2 минуты, 5 минут.
     function plural(n, one, few, many) {
       const m10 = n % 10, m100 = n % 100;
       if (m10 === 1 && m100 !== 11) return one;
@@ -39,23 +39,19 @@
       return many;
     }
 
-    // Места, где игрок уже что-то находил, и когда там снова будет что осмотреть (в вылазках).
-    function knownFinds() {
-      const world = worldState();
-      const list = [];
-      for (const key in world.opened) {
-        const [locKey, pointId] = key.split(":");
-        const point = LOCATIONS[locKey]?.points[pointId];
-        if (!point?.find) continue;
-        // Сколько вылазок осталось: respawn минус уже прошедшие после открытия. Ноль и меньше — можно идти.
-        const remaining = point.find.respawn - (world.trips - world.opened[key]);
-        list.push({ place: `${LOCATIONS[locKey].name}: ${point.name}`, what: point.find.title, remaining });
-      }
-      return list.sort((a, b) => a.remaining - b.remaining);
+    // Места, где игрок уже бывал, и сколько осталось до их обновления (по записи закрытого места, см. instanceOf).
+    function placeResets() {
+      return Object.keys(LOCATIONS)
+        .filter(k => worldState().known?.[k])
+        .map(k => {
+          const inst = instanceOf(k);
+          const leftMs = inst ? inst.closedAt + EXPEDITION.respawnMs - Date.now() : 0;
+          return { key: k, place: LOCATIONS[k].name, leftMs };
+        });
     }
 
-    function findStatusText(remaining) {
-      if (remaining <= 0) return "Готово";
-      if (remaining === 1) return "В следующей вылазке";
-      return `Через ${remaining} ${plural(remaining, "вылазку", "вылазки", "вылазок")}`;
+    function resetText(leftMs) {
+      if (leftMs <= 0) return "Всё на месте";
+      const min = Math.ceil(leftMs / 60000); // вверх: последние секунды показываем как «1 минуту», а не «0 минут»
+      return `Обновится через ${min} ${plural(min, "минуту", "минуты", "минут")}`;
     }

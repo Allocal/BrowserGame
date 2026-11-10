@@ -155,9 +155,14 @@
       body.append(mk("div", "section-title", "Вылазки"), finds);
 
       const places = mk("div", "detail-list");
-      const known = knownFinds();
-      if (!known.length) places.appendChild(mk("p", "muted", "Здесь появятся места, где ты уже что-то находил, и когда там снова будет что осмотреть."));
-      known.forEach(k => places.appendChild(journalRow(k.place, findStatusText(k.remaining), k.what, k.remaining <= 0 ? "ready" : "wait")));
+      const known = placeResets();
+      if (!known.length) places.appendChild(mk("p", "muted", "Здесь появятся места, где ты уже побывал, и когда они обновятся."));
+      known.forEach(k => {
+        const open = journey.expedition?.loc === k.key;
+        places.appendChild(journalRow(k.place, open ? "Ты здесь" : resetText(k.leftMs),
+          open ? "пока ты внутри, ничего не меняется; отсчёт пойдёт, когда выйдешь к воротам" : "убитые враги вернутся, находки появятся снова",
+          !open && k.leftMs > 0 ? "wait" : "ready"));
+      });
       body.append(mk("div", "section-title", "Места и сроки"), places);
     }
 
@@ -340,7 +345,7 @@
     let heroReturnScreen = "story";
 
     function openHero(returnScreen) {
-      heroReturnScreen = ["battle", "capital", "teacher", "arena", "shop", "tavern", "expedition"].includes(returnScreen) ? returnScreen : "story";
+      heroReturnScreen = ["battle", "capital", "teacher", "arena", "shop", "tavern", "expedition", "gates", "shopscene"].includes(returnScreen) ? returnScreen : "story";
       heroMessage = "";
       heroTab = "stats";
       renderHero();
@@ -356,8 +361,10 @@
       if (heroReturnScreen === "teacher") { openTeacher(); return; }
       if (heroReturnScreen === "arena") { showArena(); return; }
       if (heroReturnScreen === "shop") { showShop(); return; }
+      if (heroReturnScreen === "shopscene") { showShopScene(); return; }
       if (heroReturnScreen === "tavern") { showTavern(); return; }
       if (heroReturnScreen === "expedition") { showExpedition(); return; }
+      if (heroReturnScreen === "gates") { showGates(); return; }
       el("story-status").textContent = JOURNEY[journey.index].type === "end" ? "" : heroStatusText();
       showScreen("story");
     }

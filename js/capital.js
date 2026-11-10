@@ -24,6 +24,20 @@
       showScreen("capital");
     }
 
+    // Городские ворота: место перед инстансами. Отсюда ведут дороги в места из LOCATIONS.
+    function showGates() {
+      const p = journey.player;
+      syncRegen(p);
+      el("gates-text").textContent = (capitalNote ? capitalNote + " " : "") + "Городские ворота. Отсюда дороги ведут за пределы города.";
+      capitalNote = "";
+      setStatus("gates-status", p, [], regenText(p));
+      const list = el("gates-list");
+      list.replaceChildren();
+      Object.keys(LOCATIONS).forEach(key => list.appendChild(makeButton(LOCATIONS[key].name, () => startExpedition(key))));
+      saveGame("capital");
+      showScreen("gates");
+    }
+
     const SOON = {
       workshop: "Мастерская пока закрыта: мастер ещё не приехал. Загляни позже.",
       closed: "Дверь заперта на тяжёлый замок. Похоже, это здание откроется позже."
@@ -31,10 +45,10 @@
 
     function openBuilding(key) {
       if (SOON[key]) { el("capital-text").textContent = SOON[key]; return; }
-      if (key === "gate") startExpedition("forest");
+      if (key === "gate") showGates();
       if (key === "teacher") openTeacher();
       if (key === "arena") showArena();
-      if (key === "shop") showShop();
+      if (key === "shop") showShopScene();
       if (key === "tavern") openTavern();
     }
 

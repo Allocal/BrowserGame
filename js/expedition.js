@@ -1,16 +1,17 @@
     // ======================= ВЫЛАЗКИ ЗА ГОРОД =======================
     // Место — это карта из точек, соединённых тропами. Часть точек видна сразу, остальные скрыты, пока их не найдёшь.
     // В пути между точками возможна случайная встреча. Всё найденное лежит в «добыче похода» и становится твоим,
-    // только если вернуться в город через выход; поражение в вылазке добычу отнимает.
+    // только если выйти к воротам через вход; поражение добычу отнимает, но из места не выбрасывает.
     const EXPEDITION = {
       encounterChance: 0.45,   // шанс встречи в пути между точками
       lookEncounterChance: 0.2, // шанс встречи, пока осматриваешься
       revealChance: 0.6,       // шанс найти скрытую точку по соседству
-      defeatHealthShare: 0.3,  // с каким здоровьем герой очнётся в городе после поражения
+      defeatHealthShare: 0.3,  // с каким здоровьем герой очнётся на входе после поражения
       campCooldown: 2,         // сколько переходов между точками нужно после стоянки, чтобы встать снова
       campAmbush: 0.30,        // шанс ночного нападения, если у точки нет своего числа (camp.ambush)
       walkedFactor: 0.4,       // во сколько раз реже встречи в пути, когда идёшь на уже посещённое место
-      respawnMs: 10 * 60 * 1000 // через сколько после конца вылазки убитые обитатели возвращаются (как полное восстановление здоровья)
+      stashShares: [0.5, 0.25, 0.1], // какая доля добычи остаётся схроном при 1-й, 2-й и следующих смертях за вылазку
+      respawnMs: 10 * 60 * 1000 // через сколько после выхода к воротам место обновляется: враги возвращаются, находки появляются снова
     };
 
     // Враги вылазок. hp и dmg — множители к бойцу арены того же уровня (у зверя один удар, поэтому dmg выше).
@@ -28,10 +29,9 @@
       leader: { name: "Вожак стаи", gear: "none", hp: 1.6, dmg: 1.8, xp: 3.0, style: { react: 0.8 }, rareBoost: 3, armored: true, drops: [{ item: "wolfPelt", chance: 1, min: 1, max: 2 }, { item: "leaderFang", chance: 0.6, min: 1, max: 1 }] }
     };
 
-    // Точки места. links — тропы (в обе стороны); visible — видна с начала; kind: exit — выход в город.
+    // Точки места. links — тропы (в обе стороны); visible — видна с начала; kind: exit — выход к городским воротам.
     // resident — ключ врага из WILD_ENEMIES, который живёт в точке, пока его не убьют (список убитых — exp.defeated).
     // find — находка, которую игрок открывает кнопкой; copper — множитель к базовой награде;
-    // respawn — через сколько вылазок после открытия здесь снова появится добыча.
     const LOCATIONS = {
       forest: {
         name: "Тёмный лес",
@@ -40,12 +40,13 @@
         wanderers: ["wolf", "wolf", "boar"],
         raiders: { bandit: "hut" },
         start: "edge",
+        backLabel: "К опушке", // подпись кнопки пути к стартовой точке с других точек (слово склоняется, поэтому в данных)
         points: {
-          edge:     { name: "Опушка",             x: 50, y: 90, image: "img/forest/path1.jpg", camp: { ambush: 0.15 }, visible: true,  kind: "exit",  text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться в город." },
-          clearing: { name: "Поляна",             x: 24, y: 64, image: "img/forest/path2.jpg", resident: "wolf", pack: [2, 3], visible: true,  kind: "place", text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", respawn: 1, copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
-          brook:    { name: "Ручей",              x: 76, y: 64, image: "img/forest/path2.jpg", resident: "boar", visible: true,  kind: "place", text: "Быстрый ручей. На влажной земле видны следы зверей.", find: { label: "Поискать у воды", title: "Берег ручья", respawn: 1, copper: [0, 0.4] } },
-          oak:      { name: "Старый дуб",         x: 10, y: 40, image: "img/forest/oak.jpg", visible: false, kind: "place", text: "Огромный дуб, в дупле которого кто-то оставил сундучок.", find: { label: "Открыть сундучок", title: "Сундучок в дупле", respawn: 4, copper: [1.0, 2.5], rareBoost: 4 } },
-          hut:      { name: "Заброшенная сторожка", x: 44, y: 30, image: "img/forest/tower.jpg", resident: "bandit", visible: false, kind: "place", camp: { ambush: 0.45 }, text: "Покосившаяся сторожка лесника. Давно никто не заходил.", find: { label: "Обыскать сторожку", title: "Сторожка", respawn: 2, copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7,
+          edge:     { name: "Опушка",             x: 50, y: 90, image: "img/forest/path1.jpg", camp: { ambush: 0.15 }, visible: true,  kind: "exit",  text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться к воротам." },
+          clearing: { name: "Поляна",             x: 24, y: 64, image: "img/forest/path2.jpg", resident: "wolf", pack: [2, 3], visible: true,  kind: "place", text: "Солнечная поляна с высокой травой.", find: { label: "Осмотреть траву", title: "Высокая трава", copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } },
+          brook:    { name: "Ручей",              x: 76, y: 64, image: "img/forest/path2.jpg", resident: "boar", visible: true,  kind: "place", text: "Быстрый ручей. На влажной земле видны следы зверей.", find: { label: "Поискать у воды", title: "Берег ручья", copper: [0, 0.4] } },
+          oak:      { name: "Старый дуб",         x: 10, y: 40, image: "img/forest/oak.jpg", visible: false, kind: "place", text: "Огромный дуб, в дупле которого кто-то оставил сундучок.", find: { label: "Открыть сундучок", title: "Сундучок в дупле", copper: [1.0, 2.5], rareBoost: 4 } },
+          hut:      { name: "Заброшенная сторожка", x: 44, y: 30, image: "img/forest/tower.jpg", resident: "bandit", visible: false, kind: "place", camp: { ambush: 0.45 }, text: "Покосившаяся сторожка лесника. Давно никто не заходил.", find: { label: "Обыскать сторожку", title: "Сторожка", copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7,
             gear: { chance: 0.35, rarity: { common: 70, uncommon: 25, rare: 5 } } } },
           wolfpath: { name: "Волчья тропа",       x: 76, y: 20, image: "img/forest/path1.jpg", resident: "leader", visible: false, kind: "place", text: "Тропа, вытоптанная лапами. Здесь живёт вожак стаи." }
         },
@@ -79,25 +80,28 @@
       const world = worldState();
       world.trips += 1;
       (world.known ??= {})[exp.loc] = true;
-      const slain = ((world.slain ??= {})[exp.loc] ??= {});
-      exp.defeated.forEach(id => { slain[id] = Date.now(); });
+      // Выход закрывает инстанс: с этой отметки идут respawnMs до обновления места. Время считаем по отметке, поэтому это работает и пока игра закрыта.
+      (world.instances ??= {})[exp.loc] = { closedAt: Date.now(), defeated: [...exp.defeated], opened: [...exp.opened] };
     }
 
-    // Точки, где обитатели убиты недавно и ещё не вернулись. Время считаем по отметке, поэтому это работает и пока игра закрыта.
-    const slainOf = locKey => {
-      const slain = worldState().slain?.[locKey] ?? {};
-      return Object.keys(slain).filter(id => { const age = Date.now() - slain[id]; return age >= 0 && age < EXPEDITION.respawnMs; });
-    };
+    // Состояние места, оставленное прошлой вылазкой, если оно ещё не обновилось; иначе null (место свежее).
+    // age >= 0 защищает от часов, переведённых назад: иначе место держалось бы закрытым вечно.
+    function instanceOf(locKey) {
+      const inst = worldState().instances?.[locKey];
+      const age = inst ? Date.now() - inst.closedAt : Infinity;
+      return age >= 0 && age < EXPEDITION.respawnMs ? inst : null;
+    }
 
     function startExpedition(locKey) {
       const p = journey.player;
       if (!journey.expedition) {
         const loc = LOCATIONS[locKey];
         syncRegen(p);
+        const kept = instanceOf(locKey);
         journey.expedition = {
           loc: locKey, at: loc.start, mana: p.maxMana, log: loc.intro,
           visible: worldState().known?.[locKey] ? Object.keys(loc.points) : Object.keys(loc.points).filter(k => loc.points[k].visible),
-          visited: [loc.start], defeated: slainOf(locKey), acted: false, campLock: 0, encounter: null, loot: { copper: 0, items: {}, gear: [] }
+          visited: [loc.start], defeated: [...(kept?.defeated ?? [])], opened: [...(kept?.opened ?? [])], acted: false, campLock: 0, deaths: 0, stashes: {}, encounter: null, loot: { copper: 0, items: {}, gear: [] }
         };
         saveGame("capital");
       }
@@ -122,6 +126,30 @@
       for (const key in (items ?? {})) exp.loot.items[key] = (exp.loot.items[key] ?? 0) + items[key];
     }
 
+    // Доля добычи для схрона. Снаряжение не делится пополам: каждая вещь остаётся с вероятностью, равной доле.
+    // Стопки предметов округляем случайно (floor(n*доля + случайное 0…1)), чтобы в среднем возвращалась ровно доля, даже у мелких стопок.
+    function shareOfLoot(loot, share) {
+      const part = { copper: Math.floor(loot.copper * share), items: {}, gear: loot.gear.filter(() => Math.random() < share) };
+      for (const key in loot.items) {
+        const n = Math.floor(loot.items[key] * share + Math.random());
+        if (n > 0) part.items[key] = n;
+      }
+      return part;
+    }
+
+    // Подбор схрона: сначала убираем его из списка, потом переносим добычу, чтобы перезагрузка не дала взять дважды.
+    function takeStash() {
+      const exp = journey.expedition;
+      const stash = exp.stashes[exp.at];
+      if (!stash) return;
+      delete exp.stashes[exp.at];
+      addLoot(exp, stash.copper, stash.items);
+      exp.loot.gear.push(...stash.gear);
+      exp.log = `Ты подобрал оставшееся: ${lootText(stash)}.`;
+      saveGame("capital");
+      showExpedition();
+    }
+
     // Рисунок карты: видимые точки и тропы между ними; текущая точка залита, посещённые обведены.
     function mapSvg(exp, loc) {
       // Рамка карты подгоняется под видимые точки, чтобы не оставалось пустого места.
@@ -140,6 +168,7 @@
       exp.visible.forEach(id => {
         const pt = loc.points[id];
         const cls = id === exp.at ? "here" : (exp.visited.includes(id) ? "seen" : "new");
+        if (exp.stashes[id]) svg += `<circle cx="${pt.x}" cy="${pt.y}" r="6.4" class="map-stash"/>`;
         svg += `<circle cx="${pt.x}" cy="${pt.y}" r="${id === exp.at ? 4.2 : 3.2}" class="map-node ${cls}"/>`
              + `<text x="${pt.x}" y="${pt.y + 8.5}" class="map-label">${pt.name}</text>`;
       });
@@ -162,6 +191,14 @@
       setStatus("exp-status", p, extra);
       el("exp-map").innerHTML = mapSvg(exp, loc);
       el("exp-log").textContent = exp.log ?? "";
+
+      const stashBtn = el("exp-stash-btn");
+      const stash = exp.stashes[exp.at];
+      stashBtn.hidden = !stash;
+      if (stash) {
+        stashBtn.textContent = `Подобрать оставшееся: ${lootText(stash)}`;
+        stashBtn.onclick = takeStash;
+      }
 
       const findBtn = el("exp-find-btn");
       findBtn.hidden = !here.find;
@@ -193,7 +230,7 @@
         const dx = pt.x - here.x, dy = pt.y - here.y;
         const len = Math.hypot(dx, dy);
         const foe = residentAlive(exp, id) ? WILD_ENEMIES[pt.resident].name : "";
-        const btn = makeButton(foe ? `${pt.name} · ${foe}` : pt.name, () => travelTo(id));
+        const btn = makeButton(`${pt.name}${foe ? " · " + foe : ""}${exp.stashes[id] ? " · схрон" : ""}`, () => travelTo(id));
         btn.className = `arrow${exp.visited.includes(id) ? " seen" : ""}${foe ? " danger" : ""}`;
         btn.style.left = `${50 + dx / len * 38}%`;
         btn.style.top = `${50 + dy / len * 26}%`;
@@ -204,9 +241,9 @@
       el("exp-look-btn").textContent = hasHidden ? "Осмотреться" : "Осмотреться (здесь всё видно)";
       const way = pathHome(exp, loc);
       el("exp-home-btn").hidden = false;
-      el("exp-home-btn").textContent = way.length ? `Вернуться в город (переходов: ${way.length})` : "Вернуться в город";
+      el("exp-home-btn").textContent = way.length ? `${loc.backLabel} (переходов: ${way.length})` : "К воротам";
       el("exp-look-btn").hidden = false;
-      el("exp-home-hint").textContent = way.length ? "Дорога домой идёт через Опушку, по пути возможны встречи." : "";
+      el("exp-home-hint").textContent = way.length ? "Дорога к Опушке идёт по тропам, по пути возможны встречи." : `Если выйдешь к воротам, лес закроется и через ${EXPEDITION.respawnMs / 60000} мин обновится.` + (Object.keys(exp.stashes).length ? " Невзятые схроны пропадут." : "");
       // Замеченный враг: вместо обычных действий — выбор, пока он не сделан, ничего другого нельзя.
       const encBox = el("exp-encounter");
       encBox.replaceChildren();
@@ -273,20 +310,16 @@
     // Показываем, что нашли, и сохраняем это в журнале вылазки.
     function setExpLog(text) { journey.expedition.log = text; }
 
-    // Состояние мира живёт между вылазками: счётчик вылазок и когда какая находка была открыта.
-    function worldState() { return (journey.world ??= { trips: 0, opened: {} }); }
-    function findReady(exp, id) {
-      const spec = LOCATIONS[exp.loc].points[id].find;
-      const openedAt = worldState().opened[`${exp.loc}:${id}`];
-      return openedAt === undefined || worldState().trips - openedAt >= spec.respawn;
-    }
+    // Состояние мира живёт между вылазками: счётчик вылазок, какие места известны и состояние закрытых инстансов (instances).
+    function worldState() { return (journey.world ??= { trips: 0 }); }
+    function findReady(exp, id) { return !exp.opened.includes(id); }
 
     function openFind(id) {
       const exp = journey.expedition;
       const pt = LOCATIONS[exp.loc].points[id];
       if (!pt.find || !findReady(exp, id)) return;
       exp.acted = true; // находка делает вылазку «настоящей»: она засчитается при возвращении
-      worldState().opened[`${exp.loc}:${id}`] = worldState().trips + 1; // +1: это будущая вылазка, которая засчитается // сначала отмечаем, потом бросаем кубик: перезагрузка не даст открыть дважды
+      exp.opened.push(id); // сначала отмечаем, потом бросаем кубик: перезагрузка не даст открыть дважды
       const found = rollFindLoot(exp, pt.find);
       // Внимание: с шансом noticeChanceOf рядом находится ещё немного денег или обычной добычи точки (без редкого и снаряжения).
       const extra = Math.random() * 100 < noticeChanceOf(journey.player) ? rollBasicLoot(pt.find) : null;
@@ -361,7 +394,7 @@
       const won = enc.resident ? () => { markSlain(); proceed(); } : proceed;
       const drawOpts = enc.resident ? { onDraw: markSlain } : {};
       if (choice === "strike") {
-        startWildFight(kinds, `Ты напал первым: ${name} не ждал тебя.`, won, { surprise: true, ...drawOpts });
+        startWildFight(kinds, `Ты напал первым: ${name} не ждал тебя.`, won, { surprise: true, where: enc.to, ...drawOpts });
         return;
       }
       if (choice === "sneak") {
@@ -370,7 +403,7 @@
           proceed();
           return;
         }
-        startWildFight(kinds, `Тебя заметили: ${name} бросается на тебя, враг бьёт сильнее.`, won, { dmgBonus: SNEAK.failDmgBonus, ...drawOpts });
+        startWildFight(kinds, `Тебя заметили: ${name} бросается на тебя, враг бьёт сильнее.`, won, { dmgBonus: SNEAK.failDmgBonus, where: enc.to, ...drawOpts });
         return;
       }
       setExpLog(enc.resident ? "Ты передумал идти туда и остался на месте." : `Ты затаился, и ${name} ушёл своей дорогой. Придётся идти к цели заново.`);
@@ -403,7 +436,7 @@
             showExpedition();
             return;
           }
-          startWildFight(kind, `По пути к месту «${name}» на тебя нападают.`, () => arriveAt(id));
+          startWildFight(kind, `По пути к месту «${name}» на тебя нападают.`, () => arriveAt(id), { where: id });
           return;
         }
         if (roll < 0.85) { // находка в пути
@@ -421,7 +454,6 @@
       const loc = LOCATIONS[exp.loc];
       const pt = loc.points[id];
       exp.at = id;
-      if (exp.returning && id === loc.start) { exp.returning = false; expeditionHome(); return; }
       const firstTime = !exp.visited.includes(id);
       if (firstTime) exp.visited.push(id);
       // Придя в точку, можно заметить скрытые тропы рядом.
@@ -533,21 +565,38 @@
           });
         } else {
           if (outcome === "draw") opts.onDraw?.(); // ничья: враг тоже упал
-          showAfterButton("Очнуться в городе", expeditionDefeat);
+          showAfterButton("Очнуться на Опушке", () => expeditionDefeat(opts.where ?? exp.at));
         }
       }, reserve);
       el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
     }
 
-    function expeditionDefeat() {
+    // Поражение не выбрасывает из места: герой приходит в себя на входе, вылазка продолжается, добыча потеряна.
+    function expeditionDefeat(where) {
       const p = journey.player;
+      const exp = journey.expedition;
       p.health = Math.max(1, Math.floor(p.maxHealth * EXPEDITION.defeatHealthShare));
-      p.regenAt = Date.now();
-      finishTrip(journey.expedition);
-      journey.expedition = null;
-      capitalNote = "Тебя нашли в лесу и принесли в город. Всё найденное в походе потеряно.";
+      // Часть добычи остаётся в точке, где герой упал; с каждой смертью за вылазку доля меньше.
+      const share = EXPEDITION.stashShares[Math.min(exp.deaths, EXPEDITION.stashShares.length - 1)];
+      exp.deaths += 1;
+      const kept = shareOfLoot(exp.loot, share);
+      const hasKept = kept.copper > 0 || kept.gear.length > 0 || Object.keys(kept.items).length > 0;
+      if (hasKept) {
+        const stash = (exp.stashes[where] ??= { copper: 0, items: {}, gear: [] });
+        stash.copper += kept.copper;
+        kept.gear.forEach(g => stash.gear.push(g));
+        for (const key in kept.items) stash.items[key] = (stash.items[key] ?? 0) + kept.items[key];
+      }
+      exp.at = LOCATIONS[exp.loc].start;
+      exp.loot = { copper: 0, items: {}, gear: [] };
+      exp.encounter = null;
+      exp.returning = false;
+      exp.campLock = 0;
+      exp.log = hasKept
+        ? `Тебя нашли и вынесли на Опушку. Часть добычи осталась в месте «${LOCATIONS[exp.loc].points[where].name}», остальное потеряно.`
+        : "Тебя нашли и вынесли на Опушку. Всё найденное в походе потеряно.";
       saveGame("capital");
-      showCapital();
+      showExpedition();
     }
 
     // Кратчайший путь от текущей точки до выхода по уже известным тропам (поиск в ширину); пустой, если ты уже на выходе.
@@ -565,7 +614,7 @@
       return path;
     }
 
-    // Нажатие «Вернуться в город»: на выходе сразу домой, иначе идём к выходу шаг за шагом (на каждом шаге возможна встреча).
+    // Нажатие кнопки выхода: на Опушке выходим к воротам, иначе идём к Опушке шаг за шагом (на каждом шаге возможна встреча).
     function goHome() {
       const exp = journey.expedition;
       const loc = LOCATIONS[exp.loc];
@@ -586,5 +635,5 @@
       finishTrip(journey.expedition);
       journey.expedition = null;
       saveGame("capital");
-      showCapital();
+      showGates();
     }

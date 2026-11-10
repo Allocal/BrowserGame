@@ -85,12 +85,28 @@
       <div id="exp-map" class="exp-map"></div>
       <div id="exp-encounter" class="exp-encounter" hidden></div>
       <div class="scene-bottom actions">
+        <button id="exp-stash-btn" hidden></button>
         <button id="exp-find-btn" hidden></button>
         <button id="exp-camp-btn" hidden></button>
         <button id="exp-look-btn">Осмотреться</button>
         <button id="exp-hero-btn">Герой и рюкзак</button>
-        <button id="exp-home-btn" class="primary">Вернуться в город</button>
+        <button id="exp-home-btn" class="primary">К воротам</button>
         <span id="exp-home-hint" class="muted"></span>
+      </div>
+    </div>
+  </section>
+
+  <section id="gates" hidden>
+    <div id="gates-scene" class="scene">
+      <img src="img/gates.jpg" alt="Городские ворота и развилка дорог">
+      <div class="scene-top">
+        <div id="gates-status" class="status"></div>
+        <p id="gates-text" class="intro"></p>
+      </div>
+      <div id="gates-list" class="gates-list"></div>
+      <div class="scene-bottom actions">
+        <button id="gates-hero-btn">Герой и рюкзак</button>
+        <button id="gates-city-btn" class="primary">В город</button>
       </div>
     </div>
   </section>
@@ -139,23 +155,56 @@
     </div>
   </section>
 
+  <section id="shopscene" hidden>
+    <div id="shopscene-box" class="scene">
+      <img src="img/shop.jpg" alt="Лавка торговца">
+      <svg id="shop-zones" viewBox="0 0 1408 768" aria-label="Разделы магазина">
+      <polygon class="zone" data-cat="armor" data-name="Броня" points="1118,305 1150,250 1190,235 1240,250 1250,310 1230,420 1240,520 1235,640 1180,650 1135,600 1120,470"/>
+      <polygon class="zone" data-cat="armor" data-name="Броня" points="1215,245 1250,225 1310,225 1340,255 1345,300 1355,420 1345,500 1350,620 1290,660 1235,640 1240,520 1235,400 1230,300"/>
+      <polygon class="zone" data-cat="armor" data-name="Броня" points="985,260 1010,235 1040,235 1060,300 1085,330 1070,390 1000,380 985,330"/>
+      <polygon class="zone" data-cat="weapons" data-name="Оружие и щиты" points="1090,300 1100,200 1130,150 1150,120 1250,110 1270,175 1260,225 1210,235 1120,250"/>
+      <polygon class="zone" data-cat="weapons" data-name="Оружие и щиты" points="1060,400 1090,400 1105,520 1085,700 1060,700"/>
+      <polygon class="zone" data-cat="weapons" data-name="Оружие и щиты" points="1330,400 1385,520 1390,550 1340,700 1320,640"/>
+      <polygon class="zone" data-cat="weapons" data-name="Оружие и щиты" points="1110,640 1170,620 1180,700 1150,740 1115,730"/>
+      <polygon class="zone" data-cat="supplies" data-name="Припасы" points="95,110 330,115 335,330 320,460 95,450"/>
+      <polygon class="zone" data-cat="supplies" data-name="Припасы" points="95,520 430,525 435,640 400,740 95,745"/>
+      <polygon class="zone" data-cat="supplies" data-name="Припасы" points="480,230 730,235 735,480 480,480"/>
+      <polygon class="zone" data-cat="supplies" data-name="Припасы" points="750,235 985,240 980,330 775,330 770,480 750,480"/>
+      <polygon class="zone" data-cat="sell" data-name="Продать" points="790,310 835,300 920,310 945,400 940,480 1065,490 1075,545 610,545 620,500 790,490"/>
+      <polygon class="zone" data-cat="soon" data-name="Скоро" points="625,418 745,420 750,490 625,490"/>
+      <polygon class="zone" data-cat="soon" data-name="Скоро" points="640,495 880,500 880,640 840,700 655,690 650,640"/>
+      <polygon class="zone" data-cat="soon" data-name="Скоро" points="880,570 1035,575 1038,690 880,700"/>
+      </svg>
+      <span id="shop-zone-tag" hidden></span>
+      <div class="scene-top">
+        <div id="shopscene-status" class="status"></div>
+        <p id="shopscene-text" class="intro"></p>
+      </div>
+      <div class="scene-bottom actions">
+        <button class="shop-cat-btn" data-cat="armor">Броня</button>
+        <button class="shop-cat-btn" data-cat="weapons">Оружие и щиты</button>
+        <button class="shop-cat-btn" data-cat="supplies">Припасы</button>
+        <button class="shop-cat-btn" data-cat="sell">Продать</button>
+        <button id="shopscene-hero-btn">Герой и рюкзак</button>
+        <button id="shopscene-back-btn" class="primary">Назад на площадь</button>
+      </div>
+    </div>
+  </section>
+
   <section id="shop" hidden>
     <div class="story-card">
-      <h2>Магазин</h2>
-      <p>Торговец покупает всё: снаряжение за 40% цены, трофеи по их стоимости.</p>
-      <details><summary>Подробнее</summary>
-        <p>Надетые вещи сначала нужно снять на экране героя. Лучшие вещи здесь не продаются: их находят в приключениях или делают самому.</p>
-      </details>
+      <h2 id="shop-title">Магазин</h2>
+      <p id="shop-note"></p>
     </div>
     <div id="shop-status" class="status"></div>
-    <div class="section-title">Купить</div>
+    <div id="shop-buy-title" class="section-title">Купить</div>
     <div id="shop-buy" class="cards"></div>
     <p id="shop-teaser" class="muted"></p>
-    <div class="section-title">Продать</div>
+    <div id="shop-sell-title" class="section-title">Продать</div>
     <div id="shop-sell" class="cards"></div>
     <div class="actions">
       <button id="shop-hero-btn">Герой и рюкзак</button>
-      <button id="shop-back-btn" class="primary">Назад на площадь</button>
+      <button id="shop-back-btn" class="primary">Назад в лавку</button>
     </div>
   </section>
 

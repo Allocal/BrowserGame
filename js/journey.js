@@ -102,6 +102,21 @@
       try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* без хранилища очищать нечего */ }
     }
 
+    // Схроны из сохранения: только существующие точки, известные предметы, неотрицательная медь.
+    function cleanStashes(raw, loc) {
+      const out = {};
+      for (const id in (raw ?? {})) {
+        const st = raw[id];
+        if (!loc.points[id] || !st) continue;
+        const items = {};
+        for (const k in (st.items ?? {})) if (ITEMS[k] && st.items[k] > 0) items[k] = Math.floor(st.items[k]);
+        const gear = Array.isArray(st.gear) ? st.gear.map(cleanItem).filter(Boolean) : [];
+        const copper = Number.isFinite(st.copper) ? Math.max(0, Math.floor(st.copper)) : 0;
+        if (copper > 0 || gear.length || Object.keys(items).length) out[id] = { copper, items, gear };
+      }
+      return out;
+    }
+
     // Данные вылазки из сохранения проверяем: неизвестное место или точка не должны ломать игру.
     function cleanExpedition(e) {
       const loc = e && LOCATIONS[e.loc];
@@ -112,7 +127,7 @@
       const start = Object.keys(loc.points).filter(k => loc.points[k].visible);
       return {
         loc: e.loc, at: e.at, mana: Number.isFinite(e.mana) ? e.mana : 0, log: typeof e.log === "string" ? e.log : "",
-        visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])], defeated: known(e.defeated), acted: e.acted === true, campLock: Number.isFinite(e.campLock) ? Math.max(0, Math.floor(e.campLock)) : 0,
+        visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])], defeated: known(e.defeated), opened: known(e.opened).filter(id => loc.points[id].find), acted: e.acted === true, deaths: Number.isFinite(e.deaths) ? Math.max(0, Math.floor(e.deaths)) : 0, stashes: cleanStashes(e.stashes, loc), campLock: Number.isFinite(e.campLock) ? Math.max(0, Math.floor(e.campLock)) : 0,
         encounter: (WILD_ENEMIES[e.encounter?.kind] && loc.points[e.encounter?.to]) ? { kind: e.encounter.kind, count: Math.max(1, Math.min(6, Math.floor(Number(e.encounter.count)) || 1)), to: e.encounter.to, returning: e.encounter.returning === true, resident: e.encounter.resident === true } : null,
         loot: { copper: Number.isFinite(e.loot?.copper) ? Math.max(0, e.loot.copper) : 0, items,
           gear: Array.isArray(e.loot?.gear) ? e.loot.gear.map(cleanItem).filter(Boolean) : [] }
@@ -120,17 +135,25 @@
     }
 
     function cleanWorld(w) {
-      const out = { trips: Number.isFinite(w?.trips) ? Math.max(0, Math.floor(w.trips)) : 0, opened: {}, known: {} };
+      const out = { trips: Number.isFinite(w?.trips) ? Math.max(0, Math.floor(w.trips)) : 0, known: {} };
       for (const k in (w?.known ?? {})) if (LOCATIONS[k] && w.known[k] === true) out.known[k] = true;
       const now = Date.now();
+      const keep = (k, closedAt, defeated, opened) => {
+        const age = now - closedAt;
+        if (!LOCATIONS[k] || !Number.isFinite(age) || age < 0 || age >= EXPEDITION.respawnMs) return;
+        const pts = LOCATIONS[k].points;
+        (out.instances ??= {})[k] = {
+          closedAt, defeated: (Array.isArray(defeated) ? defeated : []).filter(id => pts[id]),
+          opened: (Array.isArray(opened) ? opened : []).filter(id => pts[id]?.find)
+        };
+      };
+      for (const k in (w?.instances ?? {})) keep(k, w.instances[k]?.closedAt, w.instances[k]?.defeated, w.instances[k]?.opened);
+      // Старый формат: у убитых обитателей были свои отметки времени. Собираем из них запись места; отметки находок по числу вылазок отбрасываем.
       for (const k in (w?.slain ?? {})) {
-        if (!LOCATIONS[k]) continue;
-        for (const id in w.slain[k]) {
-          const age = now - w.slain[k][id];
-          if (LOCATIONS[k].points[id] && Number.isFinite(age) && age >= 0 && age < EXPEDITION.respawnMs) ((out.slain ??= {})[k] ??= {})[id] = w.slain[k][id];
-        }
+        if (out.instances?.[k]) continue;
+        const ids = Object.keys(w.slain[k]);
+        keep(k, Math.max(0, ...ids.map(id => w.slain[k][id])), ids, []);
       }
-      for (const k in (w?.opened ?? {})) if (Number.isFinite(w.opened[k])) out.opened[k] = w.opened[k];
       return out;
     }
 

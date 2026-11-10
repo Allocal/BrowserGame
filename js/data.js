@@ -124,7 +124,7 @@
     const CRIT_CAP = 60;
     const ENEMY_CRIT = 5;
     // price — цена покупки в меди (у трофеев вместо неё value — за сколько их покупает магазин).
-    // material: true — трофей-ингредиент: позже из таких вещей можно будет делать снаряжение.
+    // Все трофеи пока просто трофеи; что из них станет ингредиентом, решим вместе с профессиями.
     const ITEMS = {
       gladRation:   { name: "Паёк гладиатора", type: "food",   heal: 40,  price: 20,  description: "Восстанавливает 40 здоровья" },
       bread:        { name: "Хлеб",           type: "food",     heal: 15,  price: 10,  description: "Восстанавливает 15 здоровья" },
@@ -140,10 +140,10 @@
       greatAxe:     { name: "Секира",         type: "weapon2h", dmg: [16, 22], crit: 12, shape: "axe",     price: 1000, description: `Двуручное оружие: +16…22 к урону, шанс крита 12%, Сила в ударе ×${BALANCE.twoHandStrength}. Занимает обе руки` },
       flint:        { name: "Огниво",        type: "tool",     shape: "fire", color: "#ff9f5a", price: 40, description: "Нужно, чтобы развести костёр и разбить лагерь. Не расходуется" },
       bedroll:      { name: "Спальник",      type: "tool",     shape: "bed",  color: "#8fb3d9", price: 90, description: "Нужен, чтобы отдохнуть в лагере. Не расходуется" },
-      dogFang:      { name: "Собачий клык",   type: "trophy",   value: 6,  material: true, description: "Трофей-материал, магазин купит за 6м" },
-      boarTusk:     { name: "Клык кабана",    type: "trophy",   value: 30, material: true, description: "Трофей-материал, магазин купит за 30м" },
-      wolfPelt:     { name: "Волчья шкура",   type: "trophy",   value: 20, material: true, description: "Трофей-материал, магазин купит за 20м" },
-      leaderFang:   { name: "Клык вожака",    type: "trophy",   value: 150, material: true, rarity: "uncommon", shape: "fang", description: "Редкий трофей-материал, магазин купит за 1с 50м" },
+      dogFang:      { name: "Собачий клык",   type: "trophy",   value: 6,  description: "Трофей-материал, магазин купит за 6м" },
+      boarTusk:     { name: "Клык кабана",    type: "trophy",   value: 30, description: "Трофей-материал, магазин купит за 30м" },
+      wolfPelt:     { name: "Волчья шкура",   type: "trophy",   value: 20, description: "Трофей-материал, магазин купит за 20м" },
+      leaderFang:   { name: "Клык вожака",    type: "trophy",   value: 150, rarity: "uncommon", shape: "fang", description: "Редкий трофей-материал, магазин купит за 1с 50м" },
       amber:        { name: "Кусок янтаря",   type: "trophy",   value: 120, rarity: "uncommon", shape: "gem", color: "#e8a93a", description: "Редкая находка, магазин купит за 1с 20м" },
       oldRing:      { name: "Старинный перстень", type: "trophy", value: 250, rarity: "rare", shape: "gem", color: "#d9c36a", description: "Очень редкая находка, магазин купит за 2с 50м" },
       goldNugget:   { name: "Золотой самородок", type: "trophy", value: 400, rarity: "rare", shape: "gem", color: "#f0c040", description: "Очень редкая находка, магазин купит за 4с" },

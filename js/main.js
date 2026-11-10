@@ -21,8 +21,32 @@
     el("exp-hero-btn").addEventListener("click", () => openHero("expedition"));
     el("exp-look-btn").addEventListener("click", lookAround);
     el("exp-home-btn").addEventListener("click", goHome);
+    el("gates-city-btn").addEventListener("click", showCapital);
+    el("gates-hero-btn").addEventListener("click", () => openHero("gates"));
     el("shop-hero-btn").addEventListener("click", () => openHero("shop"));
-    el("shop-back-btn").addEventListener("click", showCapital);
+    el("shop-back-btn").addEventListener("click", showShopScene);
+    el("shopscene-back-btn").addEventListener("click", showCapital);
+    el("shopscene-hero-btn").addEventListener("click", () => openHero("shopscene"));
+    const firstOfCat = new Set(); // в порядок Tab попадает одна область на категорию, остальные только кликаются
+    document.querySelectorAll("#shop-zones .zone").forEach(z => {
+      const cat = z.dataset.cat;
+      const open = () => openShopZone(cat);
+      z.setAttribute("role", "button");
+      z.setAttribute("aria-label", z.dataset.name);
+      z.setAttribute("tabindex", firstOfCat.has(cat) ? "-1" : "0");
+      firstOfCat.add(cat);
+      z.addEventListener("click", open);
+      z.addEventListener("mouseenter", () => lightZone(cat, true));
+      z.addEventListener("mouseleave", () => lightZone(cat, false));
+      z.addEventListener("focus", () => lightZone(cat, true));
+      z.addEventListener("blur", () => lightZone(cat, false));
+      z.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(); } }); // пробел иначе прокручивал бы страницу
+    });
+    document.querySelectorAll(".shop-cat-btn").forEach(btn => {
+      btn.addEventListener("click", () => openShopZone(btn.dataset.cat));
+      btn.addEventListener("mouseenter", () => lightZone(btn.dataset.cat, true));
+      btn.addEventListener("mouseleave", () => lightZone(btn.dataset.cat, false));
+    });
     el("arena-back-btn").addEventListener("click", showCapital);
     el("tavern-hero-btn").addEventListener("click", () => openHero("tavern"));
     el("tavern-back-btn").addEventListener("click", showCapital);
