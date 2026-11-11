@@ -65,8 +65,11 @@
       defense.push({ label: "Уклонение", value: `${p.dodge}%`, parts: dodgeParts });
 
       const critAgainst = Math.round(chanceOf(ENEMY_CRIT, -p.critResist, CRIT_K) * 10) / 10;
-      defense.push({ label: "Крит по вам", value: `${critAgainst}%`,
-        parts: [`Выносливость ${endurance}: очков сверх ${BASE_STAT} — ${p.critResist}`, `враг с базой ${ENEMY_CRIT}% и без очков крита`, `каждые ${CRIT_K} очков защиты удваивают отношение «не крит к крит»`] });
+      const enduranceOver = Math.max(0, endurance - BASE_STAT);
+      const critResistParts = [`Выносливость ${endurance}: очков сверх ${BASE_STAT} — ${enduranceOver}`];
+      part(critResistParts, `снаряжение +${bonusOf(p, "critResist")}`, bonusOf(p, "critResist"));
+      critResistParts.push(`враг с базой ${ENEMY_CRIT}% и без очков крита`, `каждые ${CRIT_K} очков защиты удваивают отношение «не крит к крит»`);
+      defense.push({ label: "Крит по вам", value: `${critAgainst}%`, parts: critResistParts });
 
       const sneakX = agilityBonus(p);
       defense.push({ label: "Пройти врага незамеченным", value: `${sneakChanceOf(p)}%`,

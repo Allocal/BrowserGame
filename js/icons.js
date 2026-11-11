@@ -57,7 +57,7 @@
       if (key === "wolfPelt") return "pelt";
       if (item.type === "food") return "bread";
       if (item.type === "armor") {
-        if (item.slot === "head") return key === "ironHelm" ? "helm" : "cap";
+        if (item.slot === "head") return item.shape ?? "cap";
         return { chest: "armor", legs: "pants", boots: "boots" }[item.slot];
       }
       return item.shape ?? "bag";

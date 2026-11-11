@@ -1,4 +1,14 @@
     // ----- Магазин -----
+    // Сколько названий показывать в подсказке о новых товарах; остальные сворачиваются в «и ещё N».
+    const TEASER_NAMES = 4;
+
+    function teaserText(tier) {
+      if (!tier) return "";
+      const names = tier.items.map(k => ITEMS[k].name);
+      const more = names.length > TEASER_NAMES ? ` и ещё ${names.length - TEASER_NAMES}` : "";
+      return `Новые товары откроются на ${tier.minLevel} уровне: ${names.slice(0, TEASER_NAMES).join(", ")}${more}.`;
+    }
+
     function shopSellPrice(key) {
       const item = ITEMS[key];
       return item.type === "trophy" ? item.value : Math.floor((item.price ?? 0) * SELL_RATE);
@@ -140,9 +150,7 @@
           chips: [chip(formatMoney(item.price), p.copper < item.price ? "dim" : "gold", "coin")],
           buttons: [makeButton(owned ? "Уже есть" : "Купить", () => buyItem(key), owned || p.copper < item.price)] }));
       });
-      el("shop-teaser").textContent = nextTier
-        ? `Новые товары откроются на ${nextTier.minLevel} уровне: ${nextTier.items.map(k => ITEMS[k].name).join(", ")}.`
-        : "";
+      el("shop-teaser").textContent = teaserText(nextTier);
 
       const sell = el("shop-sell");
       sell.replaceChildren();

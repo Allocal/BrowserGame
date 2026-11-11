@@ -160,7 +160,14 @@
     const MATERIALS = {
       cloth:   { name: "Ткань",  stats: { intelligence: { chest: 2, head: 1, legs: 1, boots: 1 } } },
       leather: { name: "Кожа",   stats: { agility:      { chest: 2, head: 1, legs: 1, boots: 1 } } },
-      iron:    { name: "Железо", stats: { endurance:    { chest: 2, head: 1, legs: 1, boots: 1 } } }
+      iron:    { name: "Железо", stats: { endurance:    { chest: 2, head: 1, legs: 1, boots: 1 } } },
+      steel:   { name: "Сталь",  stats: { endurance:    { chest: 3, head: 2, legs: 2, boots: 2 } } },
+      mail:    { name: "Кольчуга", stats: { agility:      { chest: 3, head: 2, legs: 2, boots: 2 } } },
+      silk:    { name: "Шёлк",   stats: { intelligence: { chest: 3, head: 2, legs: 2, boots: 2 }, endurance: { chest: 3, head: 2, legs: 2, boots: 2 } } }, // Выносливость нужна, чтобы маг в ткани не проигрывал магу в стали: проверено симуляцией
+      meteorite: { name: "Метеоритное железо", stats: { strength: { chest: 4, head: 3, legs: 3, boots: 3 } } },
+      crystal: { name: "Кристалл", stats: { endurance: { chest: 4, head: 3, legs: 3, boots: 3 }, magicResist: { chest: 3, head: 2, legs: 2, boots: 2 } } },
+      elven:   { name: "Эльфийская работа", stats: { agility: { chest: 4, head: 3, legs: 3, boots: 3 }, attention: { chest: 2, head: 1, legs: 1, boots: 1 } } },
+      velvet:  { name: "Бархат", stats: { intelligence: { chest: 4, head: 3, legs: 3, boots: 3 }, endurance: { chest: 4, head: 3, legs: 3, boots: 3 }, mana: { chest: 4, head: 2, legs: 2, boots: 2 } } }
     };
     const ITEMS = {
       gladRation:   { name: "Паёк гладиатора", type: "food",   heal: 40,  price: 20,  description: "Восстанавливает 40 здоровья" },
@@ -188,7 +195,7 @@
       leatherJerkin:  { name: "Кожаная куртка",  type: "armor", slot: "chest", material: "leather", armor: 4, color: "#7a5230", price: 120, description: "Броня корпуса +4" },
       leatherPants:   { name: "Кожаные штаны",   type: "armor", slot: "legs",  material: "leather", armor: 2, color: "#7a5230", price: 70,  description: "Броня пояса +2" },
       leatherBoots:   { name: "Кожаные сапоги",  type: "armor", slot: "boots", material: "leather", armor: 2, color: "#5a3d1e", price: 70,  description: "Броня ног +2" },
-      ironHelm:       { name: "Железный шлем",   type: "armor", slot: "head",  material: "iron", armor: 4, color: "#8a93a3", price: 350, description: "Броня головы +4" },
+      ironHelm:       { name: "Железный шлем",   type: "armor", slot: "head",  material: "iron", shape: "helm", armor: 4, color: "#8a93a3", price: 350, description: "Броня головы +4" },
       chainmail:      { name: "Железный нагрудник",        type: "armor", slot: "chest", material: "iron", armor: 8, color: "#8a93a3", price: 800, description: "Броня корпуса +8" }, // ключ остался от прежнего названия «Кольчуга»: на него ссылаются сохранения
       ironGreaves:    { name: "Железные поножи", type: "armor", slot: "legs",  material: "iron", armor: 4, color: "#8a93a3", price: 400, description: "Броня пояса +4" },
       ironBoots:      { name: "Железные сапоги", type: "armor", slot: "boots", material: "iron", armor: 4, color: "#6f7889", price: 350, description: "Броня ног +4" }
