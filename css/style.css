@@ -157,6 +157,9 @@
     .card button { margin-top: 6px; padding: 4px 10px; font-size: 0.85rem; }
     .card.wide { grid-column: 1 / -1; }
     .card .name { font-weight: bold; }
+    .rarity-uncommon { color: #6fdc8c; }
+    .rarity-rare { color: #5aa9ff; }
+    .rarity-unique { color: #c084fc; }
     .card .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
     .card.empty { opacity: 0.6; }
     .section-title { margin: 16px 0 8px; font-size: 0.9rem; color: #9aa; text-transform: uppercase; letter-spacing: 0.04em; }

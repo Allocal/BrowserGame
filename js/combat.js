@@ -101,6 +101,9 @@
       return Math.max(1, Math.round(raw * (1 - cut)));
     }
 
+    // Шанс увернуться от одного удара: очки уворота защитника против меткости нападающего. Если у бойца полей нет — 0.
+    const dodgeChance = (defender, attacker) => chanceOf(DODGE_BASE, (defender.dodgeRating ?? 0) - (attacker.accuracy ?? 0), DODGE_K);
+
     function resolveStrikes(attacker, defender, strikeZones, blockZones, magic = false, dmgMult = 1) {
       return strikeZones.map((zone, i) => {
         const profile = magic ? attacker.spellDamage : attacker.strikeDamages[Math.min(i, attacker.strikeDamages.length - 1)];
@@ -110,7 +113,7 @@
         const crit = Math.random() * 100 < profile.crit;
         const passes = !blocked || crit;
         // Уклониться можно от любого удара, который прошёл бы, в том числе от крита сквозь блок.
-        const dodged = passes && Math.random() * 100 < (defender.dodge ?? 0);
+        const dodged = passes && Math.random() * 100 < dodgeChance(defender, attacker);
         const hit = passes && !dodged;
         const throughBlock = crit && blocked;
         const raw = Math.round(randInt(profile.min, profile.max) * (crit && !blocked ? (profile.critMult ?? CRIT_MULTIPLIER) : 1) * dmgMult);

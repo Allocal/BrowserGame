@@ -32,7 +32,7 @@
       const ic = o.iconEl ?? (o.icon ? icon(o.icon, o.iconSize ?? 22) : null);
       if (ic) top.appendChild(ic);
       const name = document.createElement("div");
-      name.className = "name";
+      name.className = `name ${o.titleCls ?? ""}`;
       name.textContent = o.title;
       top.appendChild(name);
       card.appendChild(top);

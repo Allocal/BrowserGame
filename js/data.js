@@ -66,21 +66,35 @@
     const healthPerEndurance = c => classOf(c).health.perEndurance;
     const maxHealthOf = c => { const h = classOf(c).health; return h.base + h.perEndurance * statOf(c, "endurance") + h.perLevel * (c.level - 1) + bonusOf(c, "health"); };
     // Мана есть только у мага; Интеллект хранится у всех, но пока ничего не даёт воину.
-    // Сопротивление магии: общий эффект Интеллекта для всех классов, считается по той же кривой, что и броня.
+    // Сопротивление магии: общий эффект Интеллекта для всех классов, пока линейно (1 очко за очко сверх стартовых).
+    // Как оно превратится в шанс или долю, решит следующий кусок блока.
     const magicResistOf = c => Math.max(0, statOf(c, "intelligence") - BASE_STAT) + bonusOf(c, "magicResist");
     const maxManaOf = c => (c.classKey === "mage" ? MANA_PER_INTELLIGENCE * statOf(c, "intelligence") + bonusOf(c, "mana") : 0);
 
+    // Единая кривая шанса (блок «Характеристики и боевая математика»). baseChance — шанс в процентах при нулевой разнице
+    // между характеристикой и «анти-» характеристикой противника; diff — эта разница. Каждые k очков разницы удваивают
+    // «шансы в пользу» (10% это 1 к 9). Считаем через логарифм: напрямую 2 ** (diff / k) при огромной разнице даёт
+    // бесконечность и NaN. Шанс никогда не равен ровно 0 или 100, потолки не нужны. baseChance строго между 0 и 100.
+    const CHANCE_K = 25;
+    function chanceOf(baseChance, diff, k = CHANCE_K) {
+      const z = Math.log(baseChance / (100 - baseChance)) + (diff / k) * Math.LN2;
+      return 100 / (1 + Math.exp(-z));
+    }
+
     // Ловкость: общая характеристика для всех классов. Считаются очки сверх стартовых (BASE_STAT).
-    // Уклонение = 100 × x / (x + DODGE_K), как и броня, не доходит до 100%. Крит растёт на CRIT_PER_AGILITY процента за очко.
-    const DODGE_K = 35;
+    // Крит растёт на CRIT_PER_AGILITY процента за очко. Уворот описан ниже как пара с меткостью.
     const CRIT_PER_AGILITY = 0.8;
     // Направление может давать Ловкость сверх очков (agilityBonus), она влияет и на уклонение, и на крит.
     const directionAgility = c => DIRECTIONS[c.direction]?.agilityBonus ?? 0;
     const agilityBonus = c => Math.max(0, statOf(c, "agility") - BASE_STAT) + directionAgility(c);
-    // Верхняя граница уклонения: формула сама до 100% не доходит, но плоские бонусы снаряжения складываются поверх неё.
-    // Без границы можно было бы набрать неуязвимость, поэтому выше этого значения уклонение не растёт.
-    const DODGE_CAP = 75;
-    const dodgeOf = c => Math.min(DODGE_CAP, Math.round((100 * agilityBonus(c) / (agilityBonus(c) + DODGE_K) + bonusOf(c, "dodge")) * 10) / 10);
+    // Уворот как пара «очки уворота защитника против меткости нападающего» (блок «Характеристики и боевая математика»).
+    // Очки уворота: Ловкость сверх стартовой (с направлением) плюс бонусы вещей «Уклонение» (теперь очки, не проценты).
+    // Шанс каждого удара считается в бою из разницы с меткостью нападающего (dodgeChance в combat.js).
+    const DODGE_BASE = 5;
+    const DODGE_K = 7;
+    const dodgeRatingOf = c => agilityBonus(c) + bonusOf(c, "dodge");
+    // Меткость: очки Внимания сверх стартовых; срезают очки уворота цели (см. dodgeChance в combat.js).
+    const accuracyOf = c => Math.max(0, statOf(c, "attention") - BASE_STAT);
 
     // Шанс «заметить ещё» (Внимание): база + NOTICE.max × x / (x + k), x — очки сверх стартовых.
     // Очки дают не больше base + max (около 25%): лишняя находка должна быть приятной редкостью.
@@ -125,6 +139,13 @@
     const ENEMY_CRIT = 5;
     // price — цена покупки в меди (у трофеев вместо неё value — за сколько их покупает магазин).
     // Все трофеи пока просто трофеи; что из них станет ингредиентом, решим вместе с профессиями.
+    // Характер материала брони: постоянный бонус к характеристике, одинаковый у всех вещей материала.
+    // bySlot — размер бонуса по месту вещи (поле slot у вещи); нагрудник даёт больше остальных. Числа примерные.
+    const MATERIALS = {
+      cloth:   { name: "Ткань",  stat: "intelligence", bySlot: { chest: 2, head: 1, legs: 1, boots: 1 } },
+      leather: { name: "Кожа",   stat: "agility",      bySlot: { chest: 2, head: 1, legs: 1, boots: 1 } },
+      iron:    { name: "Железо", stat: "endurance",    bySlot: { chest: 2, head: 1, legs: 1, boots: 1 } }
+    };
     const ITEMS = {
       gladRation:   { name: "Паёк гладиатора", type: "food",   heal: 40,  price: 20,  description: "Восстанавливает 40 здоровья" },
       bread:        { name: "Хлеб",           type: "food",     heal: 15,  price: 10,  description: "Восстанавливает 15 здоровья" },
@@ -147,14 +168,14 @@
       amber:        { name: "Кусок янтаря",   type: "trophy",   value: 120, rarity: "uncommon", shape: "gem", color: "#e8a93a", description: "Редкая находка, магазин купит за 1с 20м" },
       oldRing:      { name: "Старинный перстень", type: "trophy", value: 250, rarity: "rare", shape: "gem", color: "#d9c36a", description: "Очень редкая находка, магазин купит за 2с 50м" },
       goldNugget:   { name: "Золотой самородок", type: "trophy", value: 400, rarity: "rare", shape: "gem", color: "#f0c040", description: "Очень редкая находка, магазин купит за 4с" },
-      leatherCap:     { name: "Кожаная шапка",   type: "armor", slot: "head",  armor: 2, color: "#7a5230", price: 50,  description: "Броня головы +2" },
-      leatherJerkin:  { name: "Кожаная куртка",  type: "armor", slot: "chest", armor: 4, color: "#7a5230", price: 120, description: "Броня корпуса +4" },
-      leatherPants:   { name: "Кожаные штаны",   type: "armor", slot: "legs",  armor: 2, color: "#7a5230", price: 70,  description: "Броня пояса +2" },
-      leatherBoots:   { name: "Кожаные сапоги",  type: "armor", slot: "boots", armor: 2, color: "#5a3d1e", price: 70,  description: "Броня ног +2" },
-      ironHelm:       { name: "Железный шлем",   type: "armor", slot: "head",  armor: 4, color: "#8a93a3", price: 350, description: "Броня головы +4" },
-      chainmail:      { name: "Кольчуга",        type: "armor", slot: "chest", armor: 8, color: "#8a93a3", price: 800, description: "Броня корпуса +8" },
-      ironGreaves:    { name: "Железные поножи", type: "armor", slot: "legs",  armor: 4, color: "#8a93a3", price: 400, description: "Броня пояса +4" },
-      ironBoots:      { name: "Железные сапоги", type: "armor", slot: "boots", armor: 4, color: "#6f7889", price: 350, description: "Броня ног +4" }
+      leatherCap:     { name: "Кожаная шапка",   type: "armor", slot: "head",  material: "leather", armor: 2, color: "#7a5230", price: 50,  description: "Броня головы +2" },
+      leatherJerkin:  { name: "Кожаная куртка",  type: "armor", slot: "chest", material: "leather", armor: 4, color: "#7a5230", price: 120, description: "Броня корпуса +4" },
+      leatherPants:   { name: "Кожаные штаны",   type: "armor", slot: "legs",  material: "leather", armor: 2, color: "#7a5230", price: 70,  description: "Броня пояса +2" },
+      leatherBoots:   { name: "Кожаные сапоги",  type: "armor", slot: "boots", material: "leather", armor: 2, color: "#5a3d1e", price: 70,  description: "Броня ног +2" },
+      ironHelm:       { name: "Железный шлем",   type: "armor", slot: "head",  material: "iron", armor: 4, color: "#8a93a3", price: 350, description: "Броня головы +4" },
+      chainmail:      { name: "Кольчуга",        type: "armor", slot: "chest", material: "iron", armor: 8, color: "#8a93a3", price: 800, description: "Броня корпуса +8" },
+      ironGreaves:    { name: "Железные поножи", type: "armor", slot: "legs",  material: "iron", armor: 4, color: "#8a93a3", price: 400, description: "Броня пояса +4" },
+      ironBoots:      { name: "Железные сапоги", type: "armor", slot: "boots", material: "iron", armor: 4, color: "#6f7889", price: 350, description: "Броня ног +4" }
     };
 
     // Ассортимент магазина по уровню героя: базовые вещи на уровень. Лучшее снаряжение здесь не продаётся:

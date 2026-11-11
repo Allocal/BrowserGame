@@ -7,8 +7,9 @@
     const STACKABLE_TYPES = ["food", "trophy", "tool"];
     const isStackable = key => STACKABLE_TYPES.includes(ITEMS[key].type);
 
-    function makeItem(base, rarity = "common", bonuses = []) {
-      return { base, rarity, bonuses };
+    // quality — качество вещи 0…100 (только у вещей со случайными бонусами), null — не определено.
+    function makeItem(base, rarity = "common", bonuses = [], quality = null) {
+      return { base, rarity, bonuses, quality };
     }
 
     // Шаблон по экземпляру: всё, что не меняется от предмета к предмету, читаем отсюда.
@@ -25,5 +26,6 @@
       const bonuses = Array.isArray(raw.bonuses)
         ? raw.bonuses.filter(b => b && typeof b.stat === "string" && Number.isFinite(b.value)).map(b => ({ stat: b.stat, value: b.value }))
         : [];
-      return makeItem(raw.base, typeof raw.rarity === "string" ? raw.rarity : "common", bonuses);
+      const quality = Number.isFinite(raw.quality) ? Math.min(100, Math.max(0, Math.round(raw.quality))) : null;
+      return makeItem(raw.base, typeof raw.rarity === "string" ? raw.rarity : "common", bonuses, quality);
     }

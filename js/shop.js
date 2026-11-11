@@ -156,7 +156,7 @@
         empty.textContent = "В рюкзаке ничего нет.";
         sell.appendChild(empty);
       }
-      const gearCards = p.items.map(inst => infoCard({ iconEl: itemIcon(inst.base, 26), title: instName(inst), sub: bonusLines(inst).join(", "),
+      const gearCards = p.items.map(inst => infoCard({ iconEl: itemIcon(inst.base, 26), title: instName(inst), titleCls: rarityClass(inst), sub: gearLines(inst).join(" · "),
         buttons: [makeButton(`Продать (${formatMoney(sellPriceOf(inst))})`, () => sellGear(inst))] }));
       const stackCard = key => {
         const count = p.inventory[key];

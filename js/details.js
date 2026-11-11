@@ -56,10 +56,9 @@
       part(healthParts, `снаряжение +${bonusOf(p, "health")}`, bonusOf(p, "health"));
       defense.push({ label: "Здоровье", value: `${p.maxHealth}`, parts: healthParts });
 
-      const dodgeFormula = 100 * ab / (ab + DODGE_K);
-      const dodgeParts = [`${agilityText}: очков сверх ${BASE_STAT} — ${ab} → ${num(dodgeFormula)}%`];
-      part(dodgeParts, `снаряжение +${num(bonusOf(p, "dodge"))}%`, bonusOf(p, "dodge"));
-      if (dodgeFormula + bonusOf(p, "dodge") > DODGE_CAP) dodgeParts.push(`потолок ${DODGE_CAP}%`);
+      const dodgeParts = [`${agilityText}: очков сверх ${BASE_STAT} — ${ab}`];
+      part(dodgeParts, `снаряжение +${num(bonusOf(p, "dodge"))} очк.`, bonusOf(p, "dodge"));
+      dodgeParts.push(`база ${DODGE_BASE}%, каждые ${DODGE_K} очков перевеса над меткостью врага удваивают шансы`);
       defense.push({ label: "Уклонение", value: `${p.dodge}%`, parts: dodgeParts });
 
       const sneakX = agilityBonus(p);

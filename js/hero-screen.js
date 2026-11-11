@@ -247,9 +247,9 @@
           card.appendChild(mk("div", "card-sub", "пока недоступно"));
         } else if (inst) {
           const nameRow = mk("div", "card-top");
-          nameRow.append(itemIcon(inst.base, 22), mk("div", "name", instName(inst)));
+          nameRow.append(itemIcon(inst.base, 22), mk("div", `name ${rarityClass(inst)}`, instName(inst)));
           card.append(nameRow, mk("div", "card-sub", itemOf(inst).description));
-          bonusLines(inst).forEach(t => card.appendChild(mk("div", "card-bonus", t)));
+          gearLines(inst).forEach(t => card.appendChild(mk("div", "card-bonus", t)));
           card.appendChild(makeButton("Снять", () => heroAction(() => unequipFromUi(p, slot.key), `Снято: ${itemOf(inst).name}`)));
         } else {
           const occupied = slot.key === "offHand" && itemOf(p.equipment.mainHand)?.type === "weapon2h";
@@ -283,10 +283,10 @@
       return [];
     }
 
-    function bagCard(icon, title, description, buttons, lines = []) {
+    function bagCard(icon, title, description, buttons, lines = [], titleCls = "") {
       const card = mk("div", "card");
       const nameRow = mk("div", "card-top");
-      nameRow.append(icon, mk("div", "name", title));
+      nameRow.append(icon, mk("div", `name ${titleCls}`, title));
       card.append(nameRow, mk("div", "card-sub", description));
       lines.forEach(t => card.appendChild(mk("div", "card-bonus", t)));
       const holder = mk("div", "btns");
@@ -322,7 +322,7 @@
       const cards = mk("div", "cards");
       // Снаряжение: каждый предмет — своя карточка.
       p.items.forEach(inst => {
-        cards.appendChild(bagCard(itemIcon(inst.base, 24), instName(inst), itemOf(inst).description, gearButtons(p, inst), bonusLines(inst)));
+        cards.appendChild(bagCard(itemIcon(inst.base, 24), instName(inst), itemOf(inst).description, gearButtons(p, inst), gearLines(inst), rarityClass(inst)));
       });
       // Еда и трофеи: стопками.
       keys.forEach(key => {
