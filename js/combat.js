@@ -104,20 +104,25 @@
     // Шанс увернуться от одного удара: очки уворота защитника против меткости нападающего. Если у бойца полей нет — 0.
     const dodgeChance = (defender, attacker) => chanceOf(DODGE_BASE, (defender.dodgeRating ?? 0) - (attacker.accuracy ?? 0), DODGE_K);
 
+    // Шанс крита одного удара: база оружия, сдвинутая разницей очков крита атакующего и защиты от крита цели.
+    const critChance = (profile, attacker, defender) => chanceOf(profile.critBase ?? profile.crit, (attacker.critRating ?? 0) - (defender.critResist ?? 0), CRIT_K);
+
     function resolveStrikes(attacker, defender, strikeZones, blockZones, magic = false, dmgMult = 1) {
       return strikeZones.map((zone, i) => {
         const profile = magic ? attacker.spellDamage : attacker.strikeDamages[Math.min(i, attacker.strikeDamages.length - 1)];
         // Блок держит оружие, но не магию: заклинание всегда проходит в выбранную зону.
         const blocked = !magic && blockZones.includes(zone);
         // Крит и вилка считаются для каждого удара отдельно, в том числе для заблокированных: крит пробивает блок.
-        const crit = Math.random() * 100 < profile.crit;
+        const crit = Math.random() * 100 < critChance(profile, attacker, defender);
         const passes = !blocked || crit;
         // Уклониться можно от любого удара, который прошёл бы, в том числе от крита сквозь блок.
         const dodged = passes && Math.random() * 100 < dodgeChance(defender, attacker);
         const hit = passes && !dodged;
         const throughBlock = crit && blocked;
+        // Пробивание (Сила) срезает броню зоны только у физических ударов; заклинание берёт сопротивление магии как есть.
+        const armor = magic ? (defender.magicResist ?? 0) : Math.max(0, defender.gear.armor[zone] - (attacker.penetration ?? 0));
         const raw = Math.round(randInt(profile.min, profile.max) * (crit && !blocked ? (profile.critMult ?? CRIT_MULTIPLIER) : 1) * dmgMult);
-        return { zone, hit, dodged, raw, crit, throughBlock, magic, damage: hit ? reduceDamage(raw, magic ? (defender.magicResist ?? 0) : defender.gear.armor[zone]) : 0 };
+        return { zone, hit, dodged, raw, crit, throughBlock, magic, damage: hit ? reduceDamage(raw, armor) : 0 };
       });
     }
 

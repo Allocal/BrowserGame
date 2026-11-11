@@ -40,10 +40,13 @@
       const strength = statOf(p, "strength");
       const flatDamage = (direction ? direction.damageBonus : 0) + bonusOf(p, "damage");
       p.critMult = CRIT_MULTIPLIER + bonusOf(p, "critPower") / 100; // «+20% Сила крита» значит ×2.2 вместо ×2
-      const capped = crit => Math.min(CRIT_CAP, Math.round(crit * 10) / 10);
-      p.strikeDamages = p.gear.hits.map(h => ({ min: Math.round(strength * h.strMult) + flatDamage + h.min, max: Math.round(strength * h.strMult) + flatDamage + h.max, crit: capped(h.crit + critBonusOf(p)), critMult: p.critMult }));
+      p.critRating = critRatingOf(p);
+      p.critResist = critResistOf(p);
+      const critVs = base => Math.round(chanceOf(base, p.critRating, CRIT_K) * 10) / 10; // для показа: шанс против цели без защиты от крита
+      p.strikeDamages = p.gear.hits.map(h => ({ min: Math.round(strength * h.strMult) + flatDamage + h.min, max: Math.round(strength * h.strMult) + flatDamage + h.max, crit: critVs(h.crit), critBase: h.crit, critMult: p.critMult }));
       p.dodgeRating = dodgeRatingOf(p);
       p.accuracy = accuracyOf(p);
+      p.penetration = penetrationOf(p);
       p.dodge = Math.round(chanceOf(DODGE_BASE, p.dodgeRating, DODGE_K) * 10) / 10; // для показа: шанс против врага без меткости
       if (direction && direction.armorBonus) p.gear.armor = p.gear.armor.map(a => a + direction.armorBonus);
       p.maxHealth = maxHealthOf(p);
@@ -54,7 +57,7 @@
       const spellBonus = (itemOf(p.equipment.mainHand)?.spellBonus ?? 0) + bonusOf(p, "spellPower");
       const intelligence = statOf(p, "intelligence");
       p.spellDamage = p.classKey === "mage"
-        ? { min: SPELL.min + Math.round(intelligence * SPELL.intMult) + spellBonus, max: SPELL.max + Math.round(intelligence * SPELL.intMult) + spellBonus, crit: capped(SPELL.crit + critBonusOf(p)), critMult: p.critMult }
+        ? { min: SPELL.min + Math.round(intelligence * SPELL.intMult) + spellBonus, max: SPELL.max + Math.round(intelligence * SPELL.intMult) + spellBonus, crit: critVs(SPELL.crit), critBase: SPELL.crit, critMult: p.critMult }
         : null;
     }
 
@@ -82,9 +85,9 @@
         def.armor.forEach((a, zone) => { if (a > 0) gear.armorPieces.push({ zone, color: "#4a4f5c" }); });
       }
       return {
-        name: def.name, style: def.style ?? null, gear, dodgeRating: def.dodge ?? 0, accuracy: def.accuracy ?? 0, magicResist: def.magicResist ?? 0,
+        name: def.name, style: def.style ?? null, gear, dodgeRating: def.dodge ?? 0, accuracy: def.accuracy ?? 0, critRating: def.critRating ?? 0, critResist: def.critResist ?? 0, penetration: def.penetration ?? 0, magicResist: def.magicResist ?? 0,
         health: def.health, maxHealth: def.health,
-        strikeDamages: gear.hits.map(() => ({ min: def.dmg[0], max: def.dmg[1], crit: def.crit ?? ENEMY_CRIT }))
+        strikeDamages: gear.hits.map(() => ({ min: def.dmg[0], max: def.dmg[1], crit: def.crit ?? ENEMY_CRIT, critBase: def.crit ?? ENEMY_CRIT }))
       };
     }
 

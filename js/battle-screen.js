@@ -294,12 +294,19 @@
 
     const armorLine = g => (g.armor.some(a => a > 0) ? ` · броня: ${g.armor.join("/")}` : "");
     const dodgeLine = c => (c.dodge > 0 ? ` · уклонение: ${c.dodge}%` : "");
+    // Шансы врага против этого героя: те же функции, что считает бой, поэтому число на экране не расходится с боем.
+    const foeLine = (bot, player) => {
+      const dodge = Math.round(dodgeChance(bot, player) * 10) / 10;
+      const crit = Math.round(critChance(bot.strikeDamages[0], bot, player) * 10) / 10;
+      const pen = bot.penetration ? ` · пробивание: ${Math.round(bot.penetration * 10) / 10}` : "";
+      return ` · уворот: ${dodge}% · крит: ${crit}%${pen}`;
+    };
 
     // Рисует врага целиком; вызывается в начале боя и когда на смену упавшему выходит следующий.
     function showBot(bot) {
       el("bot-name").textContent = bot.name;
       el("bot-max").textContent = bot.maxHealth;
-      el("bot-gear-name").textContent = `${bot.gear.name} · урон за удар: ${damageText(bot)}${armorLine(bot.gear)}${dodgeLine(bot)}`;
+      el("bot-gear-name").textContent = `${bot.gear.name} · урон за удар: ${damageText(bot)}${armorLine(bot.gear)}${foeLine(bot, game.player)}`;
       el("bot-figure").innerHTML = figureSvg(bot.gear, true);
       el("bot-queue").textContent = game.reserve.length ? `ещё врагов в очереди: ${game.reserve.length}` : "";
     }

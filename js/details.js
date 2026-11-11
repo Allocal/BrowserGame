@@ -36,16 +36,19 @@
 
       // Шанс крита: для мага важен крит заклинания, для воина — крит удара.
       const critProfile = p.spellDamage ?? p.strikeDamages[0];
-      const critBase = p.spellDamage ? SPELL.crit : p.gear.hits[0].crit;
-      const critRaw = critBase + critBonusOf(p);
-      const critParts = [`${p.spellDamage ? "заклинание" : "оружие"} ${num(critBase)}%`, `${agilityText} → +${num(ab * CRIT_PER_AGILITY)}%`];
-      part(critParts, `снаряжение +${num(bonusOf(p, "crit"))}%`, bonusOf(p, "crit"));
-      if (critRaw > CRIT_CAP) critParts.push(`потолок ${CRIT_CAP}%`);
+      const critParts = [`${p.spellDamage ? "заклинание" : "оружие"}: база ${num(critProfile.critBase)}%`, `${agilityText}: очков сверх ${BASE_STAT} — ${ab}`];
+      part(critParts, `снаряжение +${num(bonusOf(p, "crit"))} очк.`, bonusOf(p, "crit"));
+      critParts.push(`каждые ${CRIT_K} очков перевеса над защитой цели от крита удваивают шансы`);
       attack.push({ label: "Шанс крита", value: `${critProfile.crit}%`, parts: critParts });
 
       const powerParts = [`база ×${CRIT_MULTIPLIER}`];
       part(powerParts, `снаряжение +${bonusOf(p, "critPower")}%`, bonusOf(p, "critPower"));
       attack.push({ label: "Сила крита", value: `×${Math.round(p.critMult * 100) / 100}`, parts: powerParts });
+      const strengthOver = Math.max(0, statOf(p, "strength") - BASE_STAT);
+      const penParts = [`Сила ${statOf(p, "strength")}: очков сверх ${BASE_STAT} — ${strengthOver}`, `×${PENETRATION_PER_STRENGTH} очка за очко`];
+      part(penParts, `снаряжение +${bonusOf(p, "penetration")}`, bonusOf(p, "penetration"));
+      penParts.push("вычитается из брони зоны цели, только для физических ударов");
+      attack.push({ label: "Пробивание брони", value: num(p.penetration), parts: penParts });
       sections.push({ title: "Атака", rows: attack });
 
       // ----- Защита -----
@@ -60,6 +63,10 @@
       part(dodgeParts, `снаряжение +${num(bonusOf(p, "dodge"))} очк.`, bonusOf(p, "dodge"));
       dodgeParts.push(`база ${DODGE_BASE}%, каждые ${DODGE_K} очков перевеса над меткостью врага удваивают шансы`);
       defense.push({ label: "Уклонение", value: `${p.dodge}%`, parts: dodgeParts });
+
+      const critAgainst = Math.round(chanceOf(ENEMY_CRIT, -p.critResist, CRIT_K) * 10) / 10;
+      defense.push({ label: "Крит по вам", value: `${critAgainst}%`,
+        parts: [`Выносливость ${endurance}: очков сверх ${BASE_STAT} — ${p.critResist}`, `враг с базой ${ENEMY_CRIT}% и без очков крита`, `каждые ${CRIT_K} очков защиты удваивают отношение «не крит к крит»`] });
 
       const sneakX = agilityBonus(p);
       defense.push({ label: "Пройти врага незамеченным", value: `${sneakChanceOf(p)}%`,

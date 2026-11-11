@@ -10,7 +10,7 @@
     };
     const MANA_PER_INTELLIGENCE = 4;
     // Заклинание мага. Урон = вилка заклинания + Интеллект. Цены и вилка примерные, настраиваются симуляцией.
-    const SPELL = { name: "Магическая стрела", cost: 4, min: 4, max: 6, crit: 5, intMult: 1.5 };
+    const SPELL = { name: "Магическая стрела", cost: 4, min: 4, max: 6, crit: 5, intMult: 3 };
     const BALANCE_MANA = { regen: 2 };
     // Книга заклинаний героя хранит ключи; сами заклинания лежат здесь. Пока одно, остальные добавим позже.
     const SPELLS = { arrow: SPELL };
@@ -66,8 +66,8 @@
     const healthPerEndurance = c => classOf(c).health.perEndurance;
     const maxHealthOf = c => { const h = classOf(c).health; return h.base + h.perEndurance * statOf(c, "endurance") + h.perLevel * (c.level - 1) + bonusOf(c, "health"); };
     // Мана есть только у мага; Интеллект хранится у всех, но пока ничего не даёт воину.
-    // Сопротивление магии: общий эффект Интеллекта для всех классов, пока линейно (1 очко за очко сверх стартовых).
-    // Как оно превратится в шанс или долю, решит следующий кусок блока.
+    // Сопротивление магии: общий эффект Интеллекта для всех классов. Очки считаются линейно (1 за очко сверх стартовых),
+    // а в уроне проходят ту же кривую x/(x+ARMOR_K), что и броня (reduceDamage в combat.js).
     const magicResistOf = c => Math.max(0, statOf(c, "intelligence") - BASE_STAT) + bonusOf(c, "magicResist");
     const maxManaOf = c => (c.classKey === "mage" ? MANA_PER_INTELLIGENCE * statOf(c, "intelligence") + bonusOf(c, "mana") : 0);
 
@@ -82,8 +82,7 @@
     }
 
     // Ловкость: общая характеристика для всех классов. Считаются очки сверх стартовых (BASE_STAT).
-    // Крит растёт на CRIT_PER_AGILITY процента за очко. Уворот описан ниже как пара с меткостью.
-    const CRIT_PER_AGILITY = 0.8;
+    // Уворот и крит описаны ниже как пары: очки атакующего против очков или защиты цели.
     // Направление может давать Ловкость сверх очков (agilityBonus), она влияет и на уклонение, и на крит.
     const directionAgility = c => DIRECTIONS[c.direction]?.agilityBonus ?? 0;
     const agilityBonus = c => Math.max(0, statOf(c, "agility") - BASE_STAT) + directionAgility(c);
@@ -95,6 +94,26 @@
     const dodgeRatingOf = c => agilityBonus(c) + bonusOf(c, "dodge");
     // Меткость: очки Внимания сверх стартовых; срезают очки уворота цели (см. dodgeChance в combat.js).
     const accuracyOf = c => Math.max(0, statOf(c, "attention") - BASE_STAT);
+
+    // Крит как пара: очки крита атакующего (Ловкость + бонусы вещей) против защиты от крита цели (Выносливость).
+    // Базой шанса служит крит оружия; пока только величины, в бой они подключаются отдельным куском.
+    const CRIT_K = 8;
+    const critRatingOf = c => agilityBonus(c) + bonusOf(c, "crit");
+    const critResistOf = c => Math.max(0, statOf(c, "endurance") - BASE_STAT) + bonusOf(c, "critResist");
+
+    // Пробивание брони (Сила): очки вычитаются из брони зоны перед кривой x/(x+ARMOR_K); только для физических ударов.
+    const PENETRATION_PER_STRENGTH = 0.5;
+    const penetrationOf = c => Math.max(0, statOf(c, "strength") - BASE_STAT) * PENETRATION_PER_STRENGTH + bonusOf(c, "penetration");
+
+    // Очки характеристик врага сверх стартовых: бюджет растёт медленнее героя (ENEMY_GROWTH от его темпа), traits делит его по характерам.
+    // Временно 0,5, а не задуманные 0,8: при 0,8 на высоких уровнях рейтинги врага (рост линейный, шансы экспоненциальные) ломают бои, см. GDD v0.98.
+    const ENEMY_GROWTH = 0.5;
+    function enemyPoints(level, traits) {
+      const budget = POINTS_PER_LEVEL * (Math.max(1, level) - 1) * ENEMY_GROWTH;
+      const points = {};
+      for (const stat in traits) points[stat] = budget * traits[stat];
+      return points;
+    }
 
     // Шанс «заметить ещё» (Внимание): база + NOTICE.max × x / (x + k), x — очки сверх стартовых.
     // Очки дают не больше base + max (около 25%): лишняя находка должна быть приятной редкостью.
@@ -120,7 +139,6 @@
       const x = agilityBonus(c);
       return Math.round(SNEAK.base + SNEAK.max * x / (x + SNEAK.k));
     };
-    const critBonusOf = c => Math.round((agilityBonus(c) * CRIT_PER_AGILITY + bonusOf(c, "crit")) * 10) / 10;
 
     // Кулаки: удар без оружия.
     const FISTS = { dmg: [0, 1], crit: 5 };
@@ -134,17 +152,15 @@
     // dmg — вилка прибавки к урону удара этой рукой [от, до], crit — шанс критического удара в процентах,
     // blocks — сколько блоков добавляет щит. Урон удара = Сила + случайное число из вилки; критический удар бьёт вдвое сильнее.
     const CRIT_MULTIPLIER = 2; // базовая сила крита: удар по открытой зоне бьёт вдвое сильнее; бонусы снаряжения «Сила крита» её увеличивают
-    // Верхняя граница шанса крита. Крит пробивает блок, поэтому при очень высоком шансе блоки теряют смысл.
-    const CRIT_CAP = 60;
     const ENEMY_CRIT = 5;
     // price — цена покупки в меди (у трофеев вместо неё value — за сколько их покупает магазин).
     // Все трофеи пока просто трофеи; что из них станет ингредиентом, решим вместе с профессиями.
     // Характер материала брони: постоянный бонус к характеристике, одинаковый у всех вещей материала.
-    // bySlot — размер бонуса по месту вещи (поле slot у вещи); нагрудник даёт больше остальных. Числа примерные.
+    // stats — характеристики материала, у каждой свой размер бонуса по месту вещи (поле slot у вещи); нагрудник даёт больше остальных. Числа примерные.
     const MATERIALS = {
-      cloth:   { name: "Ткань",  stat: "intelligence", bySlot: { chest: 2, head: 1, legs: 1, boots: 1 } },
-      leather: { name: "Кожа",   stat: "agility",      bySlot: { chest: 2, head: 1, legs: 1, boots: 1 } },
-      iron:    { name: "Железо", stat: "endurance",    bySlot: { chest: 2, head: 1, legs: 1, boots: 1 } }
+      cloth:   { name: "Ткань",  stats: { intelligence: { chest: 2, head: 1, legs: 1, boots: 1 } } },
+      leather: { name: "Кожа",   stats: { agility:      { chest: 2, head: 1, legs: 1, boots: 1 } } },
+      iron:    { name: "Железо", stats: { endurance:    { chest: 2, head: 1, legs: 1, boots: 1 } } }
     };
     const ITEMS = {
       gladRation:   { name: "Паёк гладиатора", type: "food",   heal: 40,  price: 20,  description: "Восстанавливает 40 здоровья" },
@@ -173,7 +189,7 @@
       leatherPants:   { name: "Кожаные штаны",   type: "armor", slot: "legs",  material: "leather", armor: 2, color: "#7a5230", price: 70,  description: "Броня пояса +2" },
       leatherBoots:   { name: "Кожаные сапоги",  type: "armor", slot: "boots", material: "leather", armor: 2, color: "#5a3d1e", price: 70,  description: "Броня ног +2" },
       ironHelm:       { name: "Железный шлем",   type: "armor", slot: "head",  material: "iron", armor: 4, color: "#8a93a3", price: 350, description: "Броня головы +4" },
-      chainmail:      { name: "Кольчуга",        type: "armor", slot: "chest", material: "iron", armor: 8, color: "#8a93a3", price: 800, description: "Броня корпуса +8" },
+      chainmail:      { name: "Железный нагрудник",        type: "armor", slot: "chest", material: "iron", armor: 8, color: "#8a93a3", price: 800, description: "Броня корпуса +8" }, // ключ остался от прежнего названия «Кольчуга»: на него ссылаются сохранения
       ironGreaves:    { name: "Железные поножи", type: "armor", slot: "legs",  material: "iron", armor: 4, color: "#8a93a3", price: 400, description: "Броня пояса +4" },
       ironBoots:      { name: "Железные сапоги", type: "armor", slot: "boots", material: "iron", armor: 4, color: "#6f7889", price: 350, description: "Броня ног +4" }
     };

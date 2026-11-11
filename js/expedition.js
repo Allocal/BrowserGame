@@ -23,10 +23,10 @@
     // Участник пачки слабее одиночного врага: бой идёт по очереди, и без этого пачка из N была бы в N раз тяжелее одиночки.
     const PACK_MEMBER = 0.75;
     const WILD_ENEMIES = {
-      wolf:   { name: "Волк", gear: "none", hp: 0.8, dmg: 1.4, xp: 1.2, style: { strike: [0.6, 1, 1.2, 1.6], react: 0.4 }, drops: [{ item: "wolfPelt", chance: 0.45, min: 1, max: 1 }] },
-      boar:   { name: "Кабан", gear: "none", hp: 1.0, dmg: 1.2, xp: 1.3, style: { strike: [0.7, 1.8, 1, 0.8], react: 0.3 }, drops: [{ item: "boarTusk", chance: 0.4, min: 1, max: 2 }] },
-      bandit: { name: "Лесной разбойник", gear: "weapon", hp: 1.0, dmg: 1.3, xp: 1.5, style: { strike: [1.5, 1.3, 0.8, 0.6], block: [1.8, 1, 0.8, 0.6], react: 0.6 }, armored: true, drops: [{ copper: true, chance: 0.55, min: 0.1, max: 1.5 }, { copper: true, chance: 0.06, min: 3, max: 6 }] },
-      leader: { name: "Вожак стаи", gear: "none", hp: 1.6, dmg: 1.8, xp: 3.0, style: { react: 0.8 }, rareBoost: 3, armored: true, drops: [{ item: "wolfPelt", chance: 1, min: 1, max: 2 }, { item: "leaderFang", chance: 0.6, min: 1, max: 1 }] }
+      wolf:   { name: "Волк", gear: "none", traits: { agility: 0.6, attention: 0.25, strength: 0.15 }, hp: 0.8, dmg: 1.4, xp: 1.2, style: { strike: [0.6, 1, 1.2, 1.6], react: 0.4 }, drops: [{ item: "wolfPelt", chance: 0.45, min: 1, max: 1 }] },
+      boar:   { name: "Кабан", gear: "none", traits: { strength: 0.45, endurance: 0.4, attention: 0.15 }, hp: 1.0, dmg: 1.2, xp: 1.3, style: { strike: [0.7, 1.8, 1, 0.8], react: 0.3 }, drops: [{ item: "boarTusk", chance: 0.4, min: 1, max: 2 }] },
+      bandit: { name: "Лесной разбойник", gear: "weapon", traits: { attention: 0.5, agility: 0.25, endurance: 0.25 }, hp: 1.0, dmg: 1.3, xp: 1.5, style: { strike: [1.5, 1.3, 0.8, 0.6], block: [1.8, 1, 0.8, 0.6], react: 0.6 }, armored: true, drops: [{ copper: true, chance: 0.55, min: 0.1, max: 1.5 }, { copper: true, chance: 0.06, min: 3, max: 6 }] },
+      leader: { name: "Вожак стаи", gear: "none", traits: { agility: 0.3, strength: 0.25, endurance: 0.25, attention: 0.2 }, hp: 1.6, dmg: 1.8, xp: 3.0, style: { react: 0.8 }, rareBoost: 3, armored: true, drops: [{ item: "wolfPelt", chance: 1, min: 1, max: 2 }, { item: "leaderFang", chance: 0.6, min: 1, max: 1 }] }
     };
 
     // Точки места. links — тропы (в обе стороны); visible — видна с начала; kind: exit — выход к городским воротам.
@@ -496,10 +496,13 @@
       const t = WILD_ENEMIES[kind];
       const L = Math.max(1, level);
       const base = arenaFighterStats(L).dmg;
+      const pts = enemyPoints(L, t.traits ?? {});
       return {
         name: t.name, style: t.style, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp * scale), magicResist: Math.floor(0.4 * L),
         dmg: [Math.round(base[0] * t.dmg * WILD_DMG_FACTOR * dmgBonus * scale), Math.round(base[1] * t.dmg * WILD_DMG_FACTOR * dmgBonus * scale)],
-        armor: t.armored ? [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)] : null
+        armor: t.armored ? [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)] : null,
+        dodge: pts.agility ?? 0, critRating: pts.agility ?? 0, accuracy: pts.attention ?? 0, critResist: pts.endurance ?? 0,
+        penetration: (pts.strength ?? 0) * PENETRATION_PER_STRENGTH
       };
     }
 

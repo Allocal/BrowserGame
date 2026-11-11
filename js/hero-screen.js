@@ -189,10 +189,10 @@
       const plus = key => (canSpend ? [makeButton("+1", () => spendPointFromHero(key))] : []);
       const cards = mk("div", "cards");
       cards.append(
-        statCard("Сила", statBig(p, "strength"), p.gear.hits.some(h => h.strMult > 1) ? `+${statOf(p, "strength")} к урону удара, с двуручным ×${BALANCE.twoHandStrength}` : `+${statOf(p, "strength")} к урону каждого удара`, "stat-red", plus("strength"), "dumbbell"),
-        statCard("Выносливость", statBig(p, "endurance"), `+${healthPerEndurance(p) * statOf(p, "endurance")} к здоровью`, "stat-green", plus("endurance"), "heart"),
+        statCard("Сила", statBig(p, "strength"), (p.gear.hits.some(h => h.strMult > 1) ? `+${statOf(p, "strength")} к урону удара, с двуручным ×${BALANCE.twoHandStrength}` : `+${statOf(p, "strength")} к урону каждого удара`) + `, пробивание брони ${num(p.penetration)}`, "stat-red", plus("strength"), "dumbbell"),
+        statCard("Выносливость", statBig(p, "endurance"), `+${healthPerEndurance(p) * statOf(p, "endurance")} к здоровью, защита от крита ${p.critResist}`, "stat-green", plus("endurance"), "heart"),
         statCard("Ловкость", statBig(p, "agility", directionAgility(p)),
-          `Уклонение ${p.dodge}%, крит +${critBonusOf(p)}%`, "stat-cyan", plus("agility"), "feather"),
+          `Уклонение ${p.dodge}%, очки крита ${p.critRating}`, "stat-cyan", plus("agility"), "feather"),
         statCard("Внимание", statBig(p, "attention"), `Шанс заметить ещё: ${noticeChanceOf(p)}%`, "stat-orange", plus("attention"), "eye"),
         statCard("Уровень", `${p.level}`, `+${healthPerLevel(p) * (p.level - 1)} к здоровью`, "stat-gold", [], "level")
       );
@@ -441,8 +441,8 @@
 
       const rows = [
         { key: "strength", name: "Сила", icon: "dumbbell", cls: "stat-red", big: statBig(p, "strength"), info: `урон за удар: ${damageText(p)}` },
-        { key: "endurance", name: "Выносливость", icon: "heart", cls: "stat-green", big: statBig(p, "endurance"), info: `здоровье: ${p.health} / ${p.maxHealth}` },
-        { key: "agility", name: "Ловкость", icon: "feather", cls: "stat-cyan", big: statBig(p, "agility", directionAgility(p)), info: `уклонение ${p.dodge}%, крит +${critBonusOf(p)}%` },
+        { key: "endurance", name: "Выносливость", icon: "heart", cls: "stat-green", big: statBig(p, "endurance"), info: `здоровье: ${p.health} / ${p.maxHealth}, защита от крита ${p.critResist}` },
+        { key: "agility", name: "Ловкость", icon: "feather", cls: "stat-cyan", big: statBig(p, "agility", directionAgility(p)), info: `уклонение ${p.dodge}%, очки крита ${p.critRating}` },
         { key: "attention", name: "Внимание", icon: "eye", cls: "stat-orange", big: statBig(p, "attention"), info: `шанс заметить ещё: ${noticeChanceOf(p)}%` }
       ];
       if (p.classKey === "mage") rows.push({ key: "intelligence", name: "Интеллект", icon: "flask", cls: "stat-violet", big: statBig(p, "intelligence"), info: `мана в бою: ${p.maxMana}` });
