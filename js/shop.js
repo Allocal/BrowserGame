@@ -320,9 +320,8 @@
             text = `ты получил ранг «${ARENA_RANKS[a.rank].name}», жетоны +${PROMOTION_TOKENS}`;
           }
           saveGame("capital");
-          const need = xpToNext(p.level);
-          el("result").textContent = `Победа! ${text}` + (journey.levelsGained > 0 ? ". Новый уровень!" : (mode === "normal" ? ` (опыт теперь ${p.xp} / ${need})` : ""));
-          el("player-xp").textContent = `Опыт: ${p.xp} / ${need}`;
+          el("result").textContent = `Победа! ${text}` + (journey.levelsGained > 0 ? ". Новый уровень!" : (mode === "normal" ? ` (опыт теперь ${xpLine(p)})` : ""));
+          el("player-xp").textContent = `Опыт: ${xpLine(p)}`;
           showAfterButton("Вернуться на арену", () => (journey.levelsGained > 0 ? showLevelUp() : showArena()));
         } else {
           p.health = startHealth;
@@ -334,5 +333,5 @@
           heroBtn.hidden = false;
         }
       });
-      el("player-xp").textContent = `Опыт: ${p.xp} / ${xpToNext(p.level)}`;
+      el("player-xp").textContent = `Опыт: ${xpLine(p)}`;
     }

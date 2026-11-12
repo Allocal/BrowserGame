@@ -13,7 +13,7 @@
 
     function syncRegen(p) {
       const now = Date.now();
-      if (!journey || journey.phase !== "capital" || journey.expedition || p.health >= p.maxHealth) { p.regenAt = now; return; }
+      if (!journey || journey.phase !== "capital" || journey.dungeon || p.health >= p.maxHealth) { p.regenAt = now; return; }
       if (!Number.isFinite(p.regenAt) || p.regenAt > now) { p.regenAt = now; return; } // часы перевели назад — просто начинаем отсчёт заново
       const perHpMs = REGEN_SECONDS_FULL * 1000 / p.maxHealth;
       const gain = Math.floor((now - p.regenAt) / perHpMs);
@@ -50,7 +50,7 @@
       const data = {
         version: 4, mode: journey.phase === "capital" ? "capital" : mode, phase: journey.phase,
         index: journey.index, applied: journey.applied, levelsGained: journey.levelsGained,
-        expedition: journey.expedition ?? null, world: journey.world ?? null,
+        dungeon: journey.dungeon ?? null,
         player: {
           direction: p.direction, copper: p.copper, name: p.name, level: p.level, xp: p.xp, strength: p.strength, endurance: p.endurance, agility: p.agility, attention: p.attention, intelligence: p.intelligence, classKey: p.classKey, classChosen: p.classChosen, spells: p.spells, skills: p.skills, pendingPoints: p.pendingPoints, arena: p.arena, regenAt: p.regenAt,
           equipment: p.equipment, inventory: p.inventory, items: p.items, stats: p.stats, health: p.health
@@ -102,61 +102,6 @@
       try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* без хранилища очищать нечего */ }
     }
 
-    // Схроны из сохранения: только существующие точки, известные предметы, неотрицательная медь.
-    function cleanStashes(raw, loc) {
-      const out = {};
-      for (const id in (raw ?? {})) {
-        const st = raw[id];
-        if (!loc.points[id] || !st) continue;
-        const items = {};
-        for (const k in (st.items ?? {})) if (ITEMS[k] && st.items[k] > 0) items[k] = Math.floor(st.items[k]);
-        const gear = Array.isArray(st.gear) ? st.gear.map(cleanItem).filter(Boolean) : [];
-        const copper = Number.isFinite(st.copper) ? Math.max(0, Math.floor(st.copper)) : 0;
-        if (copper > 0 || gear.length || Object.keys(items).length) out[id] = { copper, items, gear };
-      }
-      return out;
-    }
-
-    // Данные вылазки из сохранения проверяем: неизвестное место или точка не должны ломать игру.
-    function cleanExpedition(e) {
-      const loc = e && LOCATIONS[e.loc];
-      if (!loc || !loc.points[e.at]) return null;
-      const known = ids => (Array.isArray(ids) ? ids.filter(id => loc.points[id]) : []);
-      const items = {};
-      for (const k in (e.loot?.items ?? {})) if (ITEMS[k] && e.loot.items[k] > 0) items[k] = e.loot.items[k];
-      const start = Object.keys(loc.points).filter(k => loc.points[k].visible);
-      return {
-        loc: e.loc, at: e.at, mana: Number.isFinite(e.mana) ? e.mana : 0, log: typeof e.log === "string" ? e.log : "",
-        visible: [...new Set([...start, ...known(e.visible), e.at])], visited: [...new Set([loc.start, ...known(e.visited)])], defeated: known(e.defeated), opened: known(e.opened).filter(id => loc.points[id].find), acted: e.acted === true, deaths: Number.isFinite(e.deaths) ? Math.max(0, Math.floor(e.deaths)) : 0, stashes: cleanStashes(e.stashes, loc), campLock: Number.isFinite(e.campLock) ? Math.max(0, Math.floor(e.campLock)) : 0,
-        encounter: (WILD_ENEMIES[e.encounter?.kind] && loc.points[e.encounter?.to]) ? { kind: e.encounter.kind, count: Math.max(1, Math.min(6, Math.floor(Number(e.encounter.count)) || 1)), to: e.encounter.to, returning: e.encounter.returning === true, resident: e.encounter.resident === true } : null,
-        loot: { copper: Number.isFinite(e.loot?.copper) ? Math.max(0, e.loot.copper) : 0, items,
-          gear: Array.isArray(e.loot?.gear) ? e.loot.gear.map(cleanItem).filter(Boolean) : [] }
-      };
-    }
-
-    function cleanWorld(w) {
-      const out = { trips: Number.isFinite(w?.trips) ? Math.max(0, Math.floor(w.trips)) : 0, known: {} };
-      for (const k in (w?.known ?? {})) if (LOCATIONS[k] && w.known[k] === true) out.known[k] = true;
-      const now = Date.now();
-      const keep = (k, closedAt, defeated, opened) => {
-        const age = now - closedAt;
-        if (!LOCATIONS[k] || !Number.isFinite(age) || age < 0 || age >= EXPEDITION.respawnMs) return;
-        const pts = LOCATIONS[k].points;
-        (out.instances ??= {})[k] = {
-          closedAt, defeated: (Array.isArray(defeated) ? defeated : []).filter(id => pts[id]),
-          opened: (Array.isArray(opened) ? opened : []).filter(id => pts[id]?.find)
-        };
-      };
-      for (const k in (w?.instances ?? {})) keep(k, w.instances[k]?.closedAt, w.instances[k]?.defeated, w.instances[k]?.opened);
-      // Старый формат: у убитых обитателей были свои отметки времени. Собираем из них запись места; отметки находок по числу вылазок отбрасываем.
-      for (const k in (w?.slain ?? {})) {
-        if (out.instances?.[k]) continue;
-        const ids = Object.keys(w.slain[k]);
-        keep(k, Math.max(0, ...ids.map(id => w.slain[k][id])), ids, []);
-      }
-      return out;
-    }
-
     // Предмет из сохранения: в версии 4 это экземпляр-объект, в версиях 2–3 — просто ключ шаблона.
     // Неизвестные или негодные предметы превращаем в null, чтобы игра не сломалась.
     function loadItem(v) {
@@ -203,10 +148,9 @@
         journey = { index: s.index, player: p, levelsGained: s.levelsGained ?? 0, applied: Boolean(s.applied),
                     phase: s.phase === "capital" ? "capital" : "road" };
 
-        journey.expedition = cleanExpedition(s.expedition);
-        journey.world = cleanWorld(s.world);
-        if (journey.phase === "capital" && journey.expedition) {
-          showExpedition();
+        journey.dungeon = cleanDungeon(s.dungeon);
+        if (journey.phase === "capital" && journey.dungeon) {
+          showDungeon();
         } else if (journey.phase === "capital") {
           showCapital();
         } else if (s.mode === "levelup") {
@@ -315,7 +259,7 @@
 
     function heroStatusText() {
       const p = journey.player;
-      return `${p.name}: уровень ${p.level} (опыт ${p.xp} / ${xpToNext(p.level)}). Здоровье: ${p.health} / ${p.maxHealth}. Деньги: ${formatMoney(p.copper)}. `
+      return `${p.name}: уровень ${p.level} (${p.level >= MAX_LEVEL ? "" : "опыт "}${xpLine(p)}). Здоровье: ${p.health} / ${p.maxHealth}. Деньги: ${formatMoney(p.copper)}. `
            + `Сила ${p.strength}, выносливость ${p.endurance}, ловкость ${p.agility}. Урон за удар: ${damageText(p)}. Надето: ${p.gear.name}.`;
     }
 

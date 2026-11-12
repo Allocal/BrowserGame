@@ -39,19 +39,3 @@
       return many;
     }
 
-    // Места, где игрок уже бывал, и сколько осталось до их обновления (по записи закрытого места, см. instanceOf).
-    function placeResets() {
-      return Object.keys(LOCATIONS)
-        .filter(k => worldState().known?.[k])
-        .map(k => {
-          const inst = instanceOf(k);
-          const leftMs = inst ? inst.closedAt + EXPEDITION.respawnMs - Date.now() : 0;
-          return { key: k, place: LOCATIONS[k].name, leftMs };
-        });
-    }
-
-    function resetText(leftMs) {
-      if (leftMs <= 0) return "Всё на месте";
-      const min = Math.ceil(leftMs / 60000); // вверх: последние секунды показываем как «1 минуту», а не «0 минут»
-      return `Обновится через ${min} ${plural(min, "минуту", "минуты", "минут")}`;
-    }

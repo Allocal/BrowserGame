@@ -73,8 +73,8 @@
       const need = xpToNext(p.level);
       el("hero-title").textContent = `${p.name}${p.arena?.title ? `, ${titleName(p.arena)}` : ""} · уровень ${p.level}`;
       el("hero-money").textContent = formatMoney(p.copper);
-      el("hero-xp").textContent = `${p.xp} / ${need}`;
-      el("hero-xp-bar").style.width = barPercent(p.xp, need);
+      el("hero-xp").textContent = xpLine(p);
+      el("hero-xp-bar").style.width = barPercent(p.level >= MAX_LEVEL ? need : p.xp, need);
       el("hero-mana-wrap").hidden = !(p.maxMana > 0);
       el("hero-mana").textContent = `${p.maxMana} / ${p.maxMana} · полная в начале боя`;
       el("hero-hp").textContent = `${p.health} / ${p.maxHealth}${regenClock(p) ? " · " + regenClock(p) : ""}`;
@@ -148,22 +148,6 @@
         fights.appendChild(journalRow(f.name, `${s.all}`, `побед ${s.wins} · поражений ${s.losses} · ничьих ${s.draws}`));
       });
       body.append(mk("div", "section-title", "Бои"), fights);
-
-      const trips = worldState().trips;
-      const finds = mk("div", "detail-list");
-      finds.appendChild(journalRow("Вылазок за город", `${trips}`, "вылазка засчитывается, если был бой или находка"));
-      body.append(mk("div", "section-title", "Вылазки"), finds);
-
-      const places = mk("div", "detail-list");
-      const known = placeResets();
-      if (!known.length) places.appendChild(mk("p", "muted", "Здесь появятся места, где ты уже побывал, и когда они обновятся."));
-      known.forEach(k => {
-        const open = journey.expedition?.loc === k.key;
-        places.appendChild(journalRow(k.place, open ? "Ты здесь" : resetText(k.leftMs),
-          open ? "пока ты внутри, ничего не меняется; отсчёт пойдёт, когда выйдешь к воротам" : "убитые враги вернутся, находки появятся снова",
-          !open && k.leftMs > 0 ? "wait" : "ready"));
-      });
-      body.append(mk("div", "section-title", "Места и сроки"), places);
     }
 
     // Вкладка «Подробно»: каждое итоговое число боя с разбором, из чего оно сложилось.
@@ -193,7 +177,7 @@
         statCard("Выносливость", statBig(p, "endurance"), `+${healthPerEndurance(p) * statOf(p, "endurance")} к здоровью, защита от крита ${p.critResist}`, "stat-green", plus("endurance"), "heart"),
         statCard("Ловкость", statBig(p, "agility", directionAgility(p)),
           `Уклонение ${p.dodge}%, очки крита ${p.critRating}`, "stat-cyan", plus("agility"), "feather"),
-        statCard("Внимание", statBig(p, "attention"), `Шанс заметить ещё: ${noticeChanceOf(p)}%`, "stat-orange", plus("attention"), "eye"),
+        statCard("Внимание", statBig(p, "attention"), `Шанс заметить находку: ${watchChanceOf(p)}%`, "stat-orange", plus("attention"), "eye"),
         statCard("Уровень", `${p.level}`, `+${healthPerLevel(p) * (p.level - 1)} к здоровью`, "stat-gold", [], "level")
       );
       // Интеллект и мана есть только у мага: воину очко в Интеллекте ничего бы не дало.
@@ -345,7 +329,7 @@
     let heroReturnScreen = "story";
 
     function openHero(returnScreen) {
-      heroReturnScreen = ["battle", "capital", "teacher", "arena", "shop", "tavern", "expedition", "gates", "shopscene"].includes(returnScreen) ? returnScreen : "story";
+      heroReturnScreen = ["battle", "capital", "teacher", "arena", "shop", "tavern", "dungeon", "gates", "shopscene"].includes(returnScreen) ? returnScreen : "story";
       heroMessage = "";
       heroTab = "stats";
       renderHero();
@@ -363,7 +347,7 @@
       if (heroReturnScreen === "shop") { showShop(); return; }
       if (heroReturnScreen === "shopscene") { showShopScene(); return; }
       if (heroReturnScreen === "tavern") { showTavern(); return; }
-      if (heroReturnScreen === "expedition") { showExpedition(); return; }
+      if (heroReturnScreen === "dungeon") { showDungeon(); return; }
       if (heroReturnScreen === "gates") { showGates(); return; }
       el("story-status").textContent = JOURNEY[journey.index].type === "end" ? "" : heroStatusText();
       showScreen("story");
@@ -379,11 +363,12 @@
       for (const key in (loot ?? {})) addToInventory(p, key, loot[key]);
       const oldMax = p.maxHealth;
       const oldLevel = p.level;
-      while (p.xp >= xpToNext(p.level)) {
+      while (p.level < MAX_LEVEL && p.xp >= xpToNext(p.level)) {
         p.xp -= xpToNext(p.level);
         p.level += 1;
         p.pendingPoints += POINTS_PER_LEVEL;
       }
+      if (p.level >= MAX_LEVEL) p.xp = 0;
       // Каждый новый уровень сам добавляет здоровье, независимо от очков выносливости.
       refreshDerived(p);
       p.health += p.maxHealth - oldMax;
@@ -443,7 +428,7 @@
         { key: "strength", name: "Сила", icon: "dumbbell", cls: "stat-red", big: statBig(p, "strength"), info: `урон за удар: ${damageText(p)}` },
         { key: "endurance", name: "Выносливость", icon: "heart", cls: "stat-green", big: statBig(p, "endurance"), info: `здоровье: ${p.health} / ${p.maxHealth}, защита от крита ${p.critResist}` },
         { key: "agility", name: "Ловкость", icon: "feather", cls: "stat-cyan", big: statBig(p, "agility", directionAgility(p)), info: `уклонение ${p.dodge}%, очки крита ${p.critRating}` },
-        { key: "attention", name: "Внимание", icon: "eye", cls: "stat-orange", big: statBig(p, "attention"), info: `шанс заметить ещё: ${noticeChanceOf(p)}%` }
+        { key: "attention", name: "Внимание", icon: "eye", cls: "stat-orange", big: statBig(p, "attention"), info: `шанс заметить находку: ${watchChanceOf(p)}%` }
       ];
       if (p.classKey === "mage") rows.push({ key: "intelligence", name: "Интеллект", icon: "flask", cls: "stat-violet", big: statBig(p, "intelligence"), info: `мана в бою: ${p.maxMana}` });
       const container = el("levelup-stats");
@@ -470,11 +455,10 @@
         if (outcome === "win") {
           journey.player.health = fighter.health;
           awardVictory(e.xp, e.copper ?? 0, e.loot);
-          const need = xpToNext(journey.player.level);
           el("result").textContent = journey.levelsGained > 0
             ? `Победа! ${rewardText(e.xp, e.copper ?? 0, e.loot)}. Новый уровень!`
-            : `Победа! ${rewardText(e.xp, e.copper ?? 0, e.loot)} (опыт теперь ${journey.player.xp} / ${need})`;
-          el("player-xp").textContent = `Опыт: ${journey.player.xp} / ${need}`;
+            : `Победа! ${rewardText(e.xp, e.copper ?? 0, e.loot)} (опыт теперь ${xpLine(journey.player)})`;
+          el("player-xp").textContent = `Опыт: ${xpLine(journey.player)}`;
           showAfterButton("Идти дальше", proceedAfterFight);
         } else {
           showAfterButton("Попробовать снова", runFight.bind(null, stop));
@@ -485,5 +469,5 @@
           heroBtn.hidden = false;
         }
       });
-      el("player-xp").textContent = `Опыт: ${journey.player.xp} / ${xpToNext(journey.player.level)}`;
+      el("player-xp").textContent = `Опыт: ${xpLine(journey.player)}`;
     }

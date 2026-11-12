@@ -62,7 +62,7 @@
     }
 
     function showScreen(id) {
-      ["menu", "training-setup", "story", "capital", "arena", "arenashop", "tavern", "shop", "teacher", "hero", "levelup", "battle", "expedition", "gates", "shopscene"].forEach(s => { el(s).hidden = (s !== id); });
+      ["menu", "training-setup", "story", "capital", "arena", "arenashop", "tavern", "shop", "teacher", "hero", "levelup", "battle", "dungeon", "gates", "shopscene"].forEach(s => { el(s).hidden = (s !== id); });
       currentScreen = id;
       if (id === "menu") refreshMenu();
       updateHud();
@@ -70,11 +70,14 @@
 
     // Постоянная панель здоровья: видна на всех экранах города, кроме героя (у него свои шкалы).
     let currentScreen = "menu";
-    const HUD_SCREENS = ["capital", "arena", "arenashop", "tavern", "shop", "teacher", "levelup", "expedition", "gates", "shopscene"];
+    const HUD_SCREENS = ["capital", "arena", "arenashop", "tavern", "shop", "teacher", "levelup", "dungeon", "gates", "shopscene"];
+
+    // Мана в панели: во время вылазки или подземелья это остаток, иначе полная.
+    const hudMana = p => journey.dungeon ? journey.dungeon.mana : p.maxMana;
 
     function regenClock(p) {
       if (p.health >= p.maxHealth) return "";
-      if (!journey || journey.phase !== "capital" || journey.expedition) return "";
+      if (!journey || journey.phase !== "capital" || journey.dungeon) return "";
       const perHpMs = REGEN_SECONDS_FULL * 1000 / p.maxHealth;
       const doneMs = Number.isFinite(p.regenAt) ? Math.max(0, Math.min(perHpMs, Date.now() - p.regenAt)) : 0; // уже накопленная часть текущего очка здоровья
       const sec = Math.max(1, Math.ceil(((p.maxHealth - p.health) * perHpMs - doneMs) / 1000));
@@ -101,10 +104,10 @@
       if (p.maxMana > 0) {
         const mtop = document.createElement("div");
         mtop.className = "hud-hp-top hud-mana-top";
-        mtop.append(icon("flask", 16), document.createTextNode(`${journey.expedition ? journey.expedition.mana : p.maxMana} / ${p.maxMana}`));
+        mtop.append(icon("flask", 16), document.createTextNode(`${hudMana(p)} / ${p.maxMana}`));
         const mbar = document.createElement("div");
         mbar.className = "bar";
-        mbar.innerHTML = `<div class="fill manafill" style="width:${barPercent(journey.expedition ? journey.expedition.mana : p.maxMana, p.maxMana)}"></div>`;
+        mbar.innerHTML = `<div class="fill manafill" style="width:${barPercent(hudMana(p), p.maxMana)}"></div>`;
         hp.append(mtop, mbar);
       }
       hud.append(hp, chip(`ур. ${p.level}`, "gold", "level"), chip(formatMoney(p.copper), "gold", "coin"));

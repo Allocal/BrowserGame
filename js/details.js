@@ -71,10 +71,6 @@
       critResistParts.push(`враг с базой ${ENEMY_CRIT}% и без очков крита`, `каждые ${CRIT_K} очков защиты удваивают отношение «не крит к крит»`);
       defense.push({ label: "Крит по вам", value: `${critAgainst}%`, parts: critResistParts });
 
-      const sneakX = agilityBonus(p);
-      defense.push({ label: "Пройти врага незамеченным", value: `${sneakChanceOf(p)}%`,
-        parts: [`${agilityText}: очков сверх ${BASE_STAT} — ${sneakX}`, `база ${SNEAK.base}%`, `от очков +${num(SNEAK.max * sneakX / (sneakX + SNEAK.k))}% (до ${SNEAK.base + SNEAK.max}%)`, `провал — враг бьёт на ${Math.round((SNEAK.failDmgBonus - 1) * 100)}% сильнее`] });
-
       const main = itemOf(p.equipment.mainHand);
       const off = itemOf(p.equipment.offHand);
       const blockParts = ["базовый 1"];
@@ -109,11 +105,9 @@
       // ----- Внимание -----
       const attention = statOf(p, "attention");
       const ax = Math.max(0, attention - BASE_STAT); // очки Внимания сверх стартовых
-      const noticeParts = [`Внимание ${attention}: очков сверх ${BASE_STAT} — ${ax}`, `база ${NOTICE.base}%`, `от очков +${num(NOTICE.max * ax / (ax + NOTICE.k))}% (до ${NOTICE.base + NOTICE.max}%)`];
-      const watchParts = [`Внимание ${attention}: очков сверх ${BASE_STAT} — ${ax}`, `база ${WATCH.base}%`, `от очков +${num(WATCH.max * ax / (ax + WATCH.k))}% (до ${WATCH.base + WATCH.max}%)`, `заметил — шанс нападения в ${num(1 / CAMP.signsFactor)} раз меньше`];
+      const watchParts = [`Внимание ${attention}: очков сверх ${BASE_STAT} — ${ax}`, `база ${WATCH.base}%`, `от очков +${num(WATCH.max * ax / (ax + WATCH.k))}% (до ${WATCH.base + WATCH.max}%)`, `один бросок на каждое место за заход`];
       sections.push({ title: "Внимание", rows: [
-        { label: "Заметить ещё при находке", value: `${noticeChanceOf(p)}%`, parts: noticeParts },
-        { label: "Заметить опасность заранее", value: `${watchChanceOf(p)}%`, parts: watchParts }
+        { label: "Заметить находку при осмотре", value: `${watchChanceOf(p)}%`, parts: watchParts }
       ] });
       return sections;
     }

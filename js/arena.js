@@ -111,8 +111,8 @@
     const REWARD_POINTS = [
       [-8, 0, 0], [-6, 0.15, 0.1], [-4, 0.4, 0.3], [-2, 0.7, 0.6], [0, 1, 1], [2, 1.2, 1.2], [5, 2, 1.5], [8, 2.6, 1.8]
     ];
-    // Доля уровня, которую даёт бой при равных уровнях, падает с ростом уровня: на высоких уровнях нужно больше боёв.
-    const arenaBaseXp = level => Math.round(xpToNext(level) * Math.max(0.1, 0.3 - 0.02 * (level - 1)));
+    // Опыт за бой с равным врагом: уровень, делённый на число таких боёв на уровень (fightsPerLevel, data.js).
+    const arenaBaseXp = level => Math.max(1, Math.round(xpToNext(level) / fightsPerLevel(level)));
     const arenaBaseMoney = level => 30 + 10 * level; // в меди
 
     function rewardMultipliers(diff) {
@@ -139,7 +139,7 @@
     function arenaEnemyDef(f) {
       const L = f.level;
       return {
-        name: f.name, health: 25 + 9 * L, dmg: f.dmg, gear: f.gear, magicResist: Math.floor(0.4 * L),
+        name: f.name, health: 25 + 9 * L, dmg: f.dmg, gear: f.gear, magicResist: Math.floor(ENEMY_MAGIC_RESIST_PER_LEVEL * L),
         armor: [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)]
       };
     }

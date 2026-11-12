@@ -24,7 +24,7 @@
       showScreen("capital");
     }
 
-    // Городские ворота: место перед инстансами. Отсюда ведут дороги в места из LOCATIONS.
+    // Городские ворота: место перед инстансами. Отсюда ведут дороги в подземелья из DUNGEONS.
     function showGates() {
       const p = journey.player;
       syncRegen(p);
@@ -33,7 +33,7 @@
       setStatus("gates-status", p, [], regenText(p));
       const list = el("gates-list");
       list.replaceChildren();
-      Object.keys(LOCATIONS).forEach(key => list.appendChild(makeButton(LOCATIONS[key].name, () => startExpedition(key))));
+      Object.keys(DUNGEONS).forEach(key => list.appendChild(makeButton(DUNGEONS[key].name, () => startDungeon(key))));
       saveGame("capital");
       showScreen("gates");
     }

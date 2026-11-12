@@ -18,9 +18,9 @@
     el("story-hero-btn").addEventListener("click", () => openHero("story"));
     el("capital-hero-btn").addEventListener("click", () => openHero("capital"));
     el("arena-hero-btn").addEventListener("click", () => openHero("arena"));
-    el("exp-hero-btn").addEventListener("click", () => openHero("expedition"));
-    el("exp-look-btn").addEventListener("click", lookAround);
-    el("exp-home-btn").addEventListener("click", goHome);
+    el("dun-home-btn").addEventListener("click", leaveDungeon);
+    el("dun-hero-btn").addEventListener("click", () => openHero("dungeon"));
+    el("dun-camp-btn").addEventListener("click", makeDungeonCamp);
     el("gates-city-btn").addEventListener("click", showCapital);
     el("gates-hero-btn").addEventListener("click", () => openHero("gates"));
     el("shop-hero-btn").addEventListener("click", () => openHero("shop"));
