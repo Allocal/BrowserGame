@@ -94,7 +94,7 @@
       const base = arenaFighterStats(L).dmg;
       const pts = enemyPoints(L, t.traits ?? {});
       return {
-        name: t.name, style: t.style, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp * scale), magicResist: Math.floor(ENEMY_MAGIC_RESIST_PER_LEVEL * L),
+        name: t.name, art: kind, style: t.style, gear: t.gear, health: Math.round((25 + 9 * L) * t.hp * scale), magicResist: Math.floor(ENEMY_MAGIC_RESIST_PER_LEVEL * L),
         dmg: [Math.round(base[0] * t.dmg * WILD_DMG_FACTOR * dmgBonus * scale), Math.round(base[1] * t.dmg * WILD_DMG_FACTOR * dmgBonus * scale)],
         armor: t.armored ? [Math.floor(0.4 * L), Math.floor(0.6 * L), Math.floor(0.4 * L), Math.floor(0.3 * L)] : null,
         dodge: pts.agility ?? 0, critRating: pts.agility ?? 0, accuracy: pts.attention ?? 0, critResist: pts.endurance ?? 0,

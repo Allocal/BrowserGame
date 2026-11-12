@@ -85,7 +85,7 @@
         def.armor.forEach((a, zone) => { if (a > 0) gear.armorPieces.push({ zone, color: "#4a4f5c" }); });
       }
       return {
-        name: def.name, style: def.style ?? null, gear, dodgeRating: def.dodge ?? 0, accuracy: def.accuracy ?? 0, critRating: def.critRating ?? 0, critResist: def.critResist ?? 0, penetration: def.penetration ?? 0, magicResist: def.magicResist ?? 0,
+        name: def.name, art: def.art ?? null, style: def.style ?? null, gear, dodgeRating: def.dodge ?? 0, accuracy: def.accuracy ?? 0, critRating: def.critRating ?? 0, critResist: def.critResist ?? 0, penetration: def.penetration ?? 0, magicResist: def.magicResist ?? 0,
         health: def.health, maxHealth: def.health,
         strikeDamages: gear.hits.map(() => ({ min: def.dmg[0], max: def.dmg[1], crit: def.crit ?? ENEMY_CRIT, critBase: def.crit ?? ENEMY_CRIT }))
       };

@@ -21,13 +21,16 @@
     .figure { margin-top: 8px; background: #23232d; border-radius: 8px; padding: 6px; transition: filter 0.4s, opacity 0.4s; }
     .figure svg { display: block; width: 100%; height: 260px; }
     .figure.dead { filter: grayscale(1); opacity: 0.45; }
-    .z { fill: #c9a27e; stroke: #3a2a1a; stroke-width: 2; transition: fill 0.2s; }
+    .z { fill: var(--fill, #c9a27e); stroke: #3a2a1a; stroke-width: 2; transition: fill 0.2s; }
     .z.target { stroke: #ff5252; stroke-width: 4; }
     .z.guard { stroke: #6c9bff; stroke-width: 4; }
     .z.flash-hit { fill: #ff5252; }
     .z.flash-block { fill: #6c9bff; }
     .z.flash-dodge { fill: #6fe3ff; }
     .z.flash-crit { fill: #ffd54f; stroke: #fff; stroke-width: 3; }
+    /* Зоны зверя — прозрачный слой поверх рисунка: в покое не видны, при ударах подсвечиваются полупрозрачно. */
+    .zo { fill: transparent; stroke: none; }
+    .zo.flash-hit, .zo.flash-block, .zo.flash-dodge, .zo.flash-crit { fill-opacity: 0.55; }
     .lbl { fill: #fff; font-size: 16px; font-weight: bold; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 3px; pointer-events: none; }
     .actions { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
     #log { margin-top: 20px; border-top: 1px solid #444; padding-top: 10px; }
