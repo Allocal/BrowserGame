@@ -6,6 +6,15 @@
     const SLOT_ARMOR_SHARE = { head: 0.5, chest: 1, legs: 0.5, boots: 0.5 };
 
     const FAMILIES = {
+      linen: {
+        material: "cloth",
+        minLevel: 1,
+        chestArmor: 3,
+        chestPrice: 120,
+        headShape: "cap",
+        color: "#c9b98a",
+        names: { head: "Льняной капюшон", chest: "Льняная мантия", legs: "Льняные штаны", boots: "Льняные туфли" }
+      },
       steel: {
         material: "steel",
         minLevel: 10,
@@ -100,3 +109,49 @@
     }
 
     buildFamilyArmor();
+
+    // ----- Проверка целостности: тихие опечатки (например, неверный слот в материале даёт бонус 0 без ошибки) превращаем в явный список -----
+    const isPositive = x => Number.isFinite(x) && x > 0;
+
+    function checkCatalog() {
+      const problems = [];
+      const bad = text => problems.push(text);
+
+      Object.entries(MATERIALS).forEach(([key, material]) => {
+        Object.entries(material.stats).forEach(([stat, bySlot]) => {
+          if (!BONUS_TYPES[stat]) bad(`материал ${key}: неизвестная характеристика ${stat}`);
+          ARMOR_SLOTS.forEach(slot => {
+            if (!Number.isFinite(bySlot[slot])) bad(`материал ${key}, ${stat}: нет числа для слота ${slot}`);
+          });
+        });
+      });
+
+      Object.entries(FAMILIES).forEach(([key, family]) => {
+        if (!MATERIALS[family.material]) bad(`семейство ${key}: нет материала ${family.material}`);
+        ["minLevel", "chestArmor", "chestPrice"].forEach(field => {
+          if (!isPositive(family[field])) bad(`семейство ${key}: поле ${field} не положительное число`);
+        });
+        ARMOR_SLOTS.forEach(slot => {
+          if (!family.names?.[slot]) bad(`семейство ${key}: нет названия для слота ${slot}`);
+        });
+        if (!ICONS[family.headShape]) bad(`семейство ${key}: нет значка ${family.headShape}`);
+      });
+
+      Object.entries(ITEMS).filter(([, item]) => item.type === "armor").forEach(([key, item]) => {
+        if (!MATERIALS[item.material]) bad(`вещь ${key}: нет материала ${item.material}`);
+        if (!ARMOR_SLOTS.includes(item.slot)) bad(`вещь ${key}: неизвестный слот ${item.slot}`);
+      });
+
+      SHOP_STOCK.forEach(tier => tier.items.forEach(key => {
+        if (!ITEMS[key]) bad(`магазин, ступень ${tier.minLevel}: нет вещи ${key}`);
+      }));
+
+      return problems;
+    }
+
+    // Запуск после загрузки всех скриптов: ICONS и BONUS_TYPES лежат в других файлах. Игроку ничего не показывает, только консоль разработчика.
+    document.addEventListener("DOMContentLoaded", () => {
+      const problems = checkCatalog();
+      if (problems.length) console.warn(`Каталог вещей: найдено проблем ${problems.length}\n${problems.join("\n")}`);
+    });
+

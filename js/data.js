@@ -158,7 +158,7 @@
     // Характер материала брони: постоянный бонус к характеристике, одинаковый у всех вещей материала.
     // stats — характеристики материала, у каждой свой размер бонуса по месту вещи (поле slot у вещи); нагрудник даёт больше остальных. Числа примерные.
     const MATERIALS = {
-      cloth:   { name: "Ткань",  stats: { intelligence: { chest: 2, head: 1, legs: 1, boots: 1 } } },
+      cloth:   { name: "Ткань",  stats: { intelligence: { chest: 2, head: 1, legs: 1, boots: 1 }, endurance: { chest: 1, head: 1, legs: 1, boots: 1 } } },
       leather: { name: "Кожа",   stats: { agility:      { chest: 2, head: 1, legs: 1, boots: 1 } } },
       iron:    { name: "Железо", stats: { endurance:    { chest: 2, head: 1, legs: 1, boots: 1 } } },
       steel:   { name: "Сталь",  stats: { endurance:    { chest: 3, head: 2, legs: 2, boots: 2 } } },
