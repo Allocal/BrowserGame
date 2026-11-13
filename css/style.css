@@ -6,13 +6,14 @@
     label { display: block; margin: 10px 0; }
     #hero-name-input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; padding: 8px 10px; font: inherit; color: inherit; background: #2a2b36; border: 1px solid #4a4c5c; border-radius: 8px; }
     select { margin-left: 8px; padding: 4px; }
-    button { font: inherit; padding: 8px 14px; border: 1px solid #555; border-radius: 6px; background: #2c2c38; color: #eee; cursor: pointer; }
+    button { font: inherit; padding: 6px 16px; border: 10px solid transparent; border-image: url(../img/ui/button.png) 34 fill / 10px stretch; background: none; color: #dff3f6; cursor: pointer; }
+    button:hover:not(:disabled) { border-image-source: url(../img/ui/button_hover.png); border-image-slice: 44 fill; }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .menu-buttons { display: flex; flex-direction: column; gap: 10px; max-width: 320px; margin-top: 16px; }
-    .primary { background: #3b6fd6; border-color: #6c9bff; }
+    /* «Главная» и «выбранная» кнопка: рамка со свечением и золотистый текст */
+    .primary, .zone.on, .tab.on { border-image-source: url(../img/ui/button_hover.png); border-image-slice: 44 fill; color: #ffe9a8; }
     .zones { display: flex; gap: 8px; flex-wrap: wrap; }
-    .zone.on { background: #3b6fd6; border-color: #6c9bff; }
-    .bar { background: #3a1f1f; border-radius: 4px; height: 14px; overflow: hidden; }
+    .bar { height: 14px; border: solid transparent; border-width: 6px 22px; border-image: url(../img/ui/bar.png) 22 75 fill / 6px 22px stretch; background: none; border-radius: 0; overflow: hidden; }
     .fill { background: #4caf50; height: 100%; width: 100%; transition: width 0.3s; }
     .xpfill { background: #6c9bff; width: 0; }
     .manafill { background: #9a7bff; }
@@ -51,7 +52,7 @@
     .hero-list div { padding: 4px 0; }
     .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid #33333f; flex-wrap: wrap; }
     .row .btns { display: flex; gap: 6px; flex-wrap: wrap; }
-    .row button { padding: 5px 10px; font-size: 0.9rem; }
+    .row button { padding: 4px 10px; font-size: 0.9rem; }
     .muted { color: #9aa; }
     .soon { color: #6b6b78; }
     .promo { color: #e0b84a; font-weight: bold; }
@@ -75,14 +76,14 @@
     #hud .hud-hp-top .ico { width: 16px; height: 16px; }
     #hud .hud-mana-top { color: #b79bff; margin-top: 4px; }
     #hud .hud-regen { margin-left: auto; color: #9aa; font-size: 0.82rem; }
-    #hud .bar { margin-top: 4px; height: 8px; }
+    #hud .bar { margin-top: 4px; height: 8px; border: 0; border-image: none; border-radius: 4px; background: #3a1f1f; }
     .exp-scene[hidden] { display: none; }
 
     /* Лес во весь экран: тот же приём, что у столицы. Карта лежит миникартой в углу, находка и лагерь — кнопки внизу, выбор при встрече — карточка по центру. */
     #dungeon:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
     #dungeon-scene { width: min(100vw, calc(100vh * 700 / 380)); aspect-ratio: 700 / 380; background: #20212b; border: none; border-radius: 0; }
     #gates:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
-    #gates-scene { width: min(100vw, calc(100vh * 1408 / 768)); border: none; border-radius: 0; }
+    #gates-scene { width: min(100vw, calc(100vh * 1376 / 768)); border: none; border-radius: 0; }
     .gates-list { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 2; display: flex; gap: 10px; }
     #shopscene:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
     #shop [hidden] { display: none; }
@@ -144,7 +145,6 @@
     .points-banner .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; } /* wrap: пять вкладок не помещаются в один ряд на телефоне */
     .tab { flex: 1 1 auto; padding: 9px 8px; border-radius: 8px; }
-    .tab.on { background: #3b6fd6; border-color: #6c9bff; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
     .card { background: #23232d; border: 1px solid #3a3b4a; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
     .card-title { color: #9aa; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
@@ -160,7 +160,8 @@
     .detail-value.ready { color: #8fd6a4; }
     .detail-value.wait { color: #e0b070; }
     .card-bonus { color: #8fd6a4; font-size: 0.85rem; font-weight: 600; }
-    .card button { margin-top: 6px; padding: 4px 10px; font-size: 0.85rem; }
+    .card button { margin-top: 6px; padding: 5px 10px; font-size: 0.85rem; }
+    .row button, .card button { border-width: 7px; border-image-width: 7px; }
     .card.wide { grid-column: 1 / -1; }
     .card .name { font-weight: bold; }
     .rarity-uncommon { color: #6fdc8c; }
@@ -181,20 +182,45 @@
     .scene img { display: block; width: 100%; height: auto; }
     .hotspot { position: absolute; padding: 0; border: 2px solid transparent; border-radius: 12px; background: transparent; cursor: pointer; transition: background .18s, border-color .18s; }
     .hotspot:hover, .hotspot:focus-visible { outline: none; border-color: #ffe4a0; background: #fff2c51c; }
-    #spot-tavern   { left: 0%;  top: 15%; width: 27%; height: 51%; }
-    #spot-shop     { left: 25%; top: 30%; width: 18%; height: 34%; }
-    #spot-teacher  { left: 42%; top: 12%; width: 15%; height: 48%; }
-    #spot-workshop { left: 59%; top: 27%; width: 22%; height: 37%; }
-    #spot-closed   { left: 80%; top: 27%; width: 17%; height: 39%; }
-    #spot-arena    { left: 57%; top: 3%;  width: 18%; height: 19%; }
-    #spot-gate     { left: 88%; top: 66%; width: 10%; height: 26%; }
-    .scene-tag { position: absolute; left: 62%; top: 20%; padding: 3px 10px; font: 600 clamp(10px, 2.4vw, 14px)/1.2 system-ui, sans-serif; color: #fff4d8; background: #21180fe8; border: 1px solid #d4b777; border-radius: 20px; pointer-events: none; }
+    #spot-tavern  { left: 0%;  top: 14%; width: 23%; height: 56%; }
+    #spot-guild   { left: 23%; top: 21%; width: 16%; height: 44%; }
+    #spot-library { left: 42%; top: 5%;  width: 18%; height: 60%; }
+    #spot-teacher { left: 62%; top: 8%;  width: 16%; height: 56%; }
+    #spot-arena   { left: 78%; top: 8%;  width: 22%; height: 58%; }
+    /* Торговая площадь (картинка square_trade.jpg, 1376x768) */
+    #trade:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
+    #trade-scene { width: min(100vw, calc(100vh * 1376 / 768)); border: none; border-radius: 0; }
+    #spot-shop      { left: 0%;  top: 8%;  width: 27%; height: 62%; }
+    #spot-forge     { left: 28%; top: 28%; width: 13%; height: 40%; }
+    #spot-bank      { left: 42%; top: 22%; width: 20%; height: 45%; }
+    #spot-alchemist { left: 62%; top: 17%; width: 14%; height: 48%; }
+    #spot-artificer { left: 78%; top: 1%;  width: 22%; height: 66%; }
+    #spot-main      { left: 85%; top: 72%; width: 15%; height: 28%; }
+    #spot-trade   { left: 2%;  top: 72%; width: 15%; height: 28%; }  /* левый указатель */
+    #spot-gate    { left: 83%; top: 68%; width: 16%; height: 32%; }  /* правый указатель: лес */
 
-    /* Столица во весь экран: сцена вписывается в окно с сохранением пропорций картинки (1672:941), панели лежат поверх неё. */
+    /* Столица во весь экран: сцена вписывается в окно с сохранением пропорций картинки (1376:768), панели лежат поверх неё. */
     #capital:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
-    #village { width: min(100vw, calc(100vh * 1672 / 941)); border: none; border-radius: 0; }
+    #village { width: min(100vw, calc(100vh * 1376 / 768)); border: none; border-radius: 0; }
     .scene-top, .scene-bottom { position: absolute; left: 0; right: 0; z-index: 2; padding: 10px 16px; line-height: 1.4; }
     .scene-top { top: 0; left: 450px; background: linear-gradient(#000c, #0000); }
     #dungeon-scene .scene-top { right: min(290px, 24%); } /* текст не заходит под мини-карту */
     .scene-bottom { bottom: 0; margin: 0; background: linear-gradient(#0000, #000c); }
-    body:has(#capital:not([hidden])) #hud, body:has(#dungeon:not([hidden])) #hud, body:has(#gates:not([hidden])) #hud, body:has(#shopscene:not([hidden])) #hud { position: fixed; top: 10px; left: 10px; width: 420px; margin: 0; z-index: 20; }
+    body:has(#capital:not([hidden])) #hud, body:has(#trade:not([hidden])) #hud, body:has(#dungeon:not([hidden])) #hud, body:has(#gates:not([hidden])) #hud, body:has(#shopscene:not([hidden])) #hud { position: fixed; top: 10px; left: 10px; width: 420px; margin: 0; z-index: 20; }
+
+    /* ----- Экран боя: полноэкранная сцена с фоном, бойцы стоят на нём, управление в нижней панели ----- */
+    #battle:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; padding: 12px 20px; overflow-y: auto; background: #0b1018 url(../img/bg/battle_bg.jpg) center / cover no-repeat; }
+    #battle .arena { flex: 1; align-items: flex-end; }
+    #battle .figure { background: none; }
+    #battle-controls { background: none; border: 18px solid transparent; border-image: url(../img/ui/panel.png) 44 fill / 18px stretch; padding: 4px 10px; }
+    #battle .figure svg { height: min(260px, 30vh); } /* на низком окне бойцы ниже, чтобы панель управления поместилась */
+    /* Управление боя в две колонки: удары слева, блоки справа, кнопки хода на всю ширину — так панель ниже и помещается в низкое окно */
+    #battle-controls { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; align-items: start; }
+    #battle-controls h3 { margin: 6px 0; }
+    #strike-title { grid-column: 1; grid-row: 1; }
+    #strike-zones { grid-column: 1; grid-row: 2; }
+    #strike-reset { grid-column: 1; grid-row: 3; justify-self: start; margin-top: 8px !important; }
+    #block-title { grid-column: 2; grid-row: 1; }
+    #block-zones { grid-column: 2; grid-row: 2; }
+    #battle-controls .actions { grid-column: 1 / -1; grid-row: 4; margin-top: 6px; }
+    #battle-controls #result, #battle-controls #log { grid-column: 1 / -1; }

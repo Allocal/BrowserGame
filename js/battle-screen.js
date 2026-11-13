@@ -62,7 +62,7 @@
     }
 
     function showScreen(id) {
-      ["menu", "training-setup", "story", "capital", "arena", "arenashop", "tavern", "shop", "teacher", "hero", "levelup", "battle", "dungeon", "gates", "shopscene"].forEach(s => { el(s).hidden = (s !== id); });
+      ["menu", "training-setup", "story", "capital", "trade", "arena", "arenashop", "tavern", "shop", "teacher", "hero", "levelup", "battle", "dungeon", "gates", "shopscene"].forEach(s => { el(s).hidden = (s !== id); });
       currentScreen = id;
       if (id === "menu") refreshMenu();
       updateHud();
@@ -70,7 +70,7 @@
 
     // Постоянная панель здоровья: видна на всех экранах города, кроме героя (у него свои шкалы).
     let currentScreen = "menu";
-    const HUD_SCREENS = ["capital", "arena", "arenashop", "tavern", "shop", "teacher", "levelup", "dungeon", "gates", "shopscene"];
+    const HUD_SCREENS = ["capital", "trade", "arena", "arenashop", "tavern", "shop", "teacher", "levelup", "dungeon", "gates", "shopscene"];
 
     // Мана в панели: во время вылазки или подземелья это остаток, иначе полная.
     const hudMana = p => journey.dungeon ? journey.dungeon.mana : p.maxMana;

@@ -329,7 +329,7 @@
     let heroReturnScreen = "story";
 
     function openHero(returnScreen) {
-      heroReturnScreen = ["battle", "capital", "teacher", "arena", "shop", "tavern", "dungeon", "gates", "shopscene"].includes(returnScreen) ? returnScreen : "story";
+      heroReturnScreen = ["battle", "capital", "trade", "teacher", "arena", "shop", "tavern", "dungeon", "gates", "shopscene"].includes(returnScreen) ? returnScreen : "story";
       heroMessage = "";
       heroTab = "stats";
       renderHero();
@@ -342,6 +342,7 @@
         return;
       }
       if (heroReturnScreen === "capital") { showCapital(); return; }
+      if (heroReturnScreen === "trade") { showTrade(); return; }
       if (heroReturnScreen === "teacher") { openTeacher(); return; }
       if (heroReturnScreen === "arena") { showArena(); return; }
       if (heroReturnScreen === "shop") { showShop(); return; }

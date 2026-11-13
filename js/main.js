@@ -25,7 +25,7 @@
     el("gates-hero-btn").addEventListener("click", () => openHero("gates"));
     el("shop-hero-btn").addEventListener("click", () => openHero("shop"));
     el("shop-back-btn").addEventListener("click", showShopScene);
-    el("shopscene-back-btn").addEventListener("click", showCapital);
+    el("shopscene-back-btn").addEventListener("click", showTrade);
     el("shopscene-hero-btn").addEventListener("click", () => openHero("shopscene"));
     const firstOfCat = new Set(); // в порядок Tab попадает одна область на категорию, остальные только кликаются
     document.querySelectorAll("#shop-zones .zone").forEach(z => {
@@ -68,6 +68,11 @@
     el("village").querySelectorAll(".hotspot").forEach(btn => {
       btn.addEventListener("click", () => openBuilding(btn.dataset.place));
     });
+    el("trade-scene").querySelectorAll(".hotspot").forEach(btn => {
+      btn.addEventListener("click", () => openTradeBuilding(btn.dataset.place));
+    });
+    el("trade-hero-btn").addEventListener("click", () => openHero("trade"));
+    el("trade-menu-btn").addEventListener("click", () => showScreen("menu"));
     el("auto-btn").addEventListener("click", () => {
       setAuto(!autoOn);
       if (autoOn) autoStep();

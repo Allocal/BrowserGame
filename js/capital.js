@@ -38,9 +38,24 @@
       showScreen("gates");
     }
 
+    // Торговая площадь: соседний с главной экран, здесь лавки и ремёсла.
+    function showTrade() {
+      const p = journey.player;
+      syncRegen(p);
+      el("trade-text").textContent = (capitalNote ? capitalNote + " " : "") + "Торговая площадь. Лавки, кузница и мастерские.";
+      capitalNote = "";
+      setStatus("trade-status", p, [], regenText(p));
+      saveGame("capital");
+      showScreen("trade");
+    }
+
     const SOON = {
-      workshop: "Мастерская пока закрыта: мастер ещё не приехал. Загляни позже.",
-      closed: "Дверь заперта на тяжёлый замок. Похоже, это здание откроется позже."
+      guild: "Гильдия пока закрыта: доска заданий ещё пуста.",
+      library: "Библиотека пока закрыта: книги ещё не привезли.",
+      forge: "Кузница пока закрыта: кузнец ещё не вернулся.",
+      bank: "Банк пока закрыт: двери заперты, ключ у управляющего.",
+      alchemist: "Лавка алхимика пока закрыта: травы ещё не завезли.",
+      artificer: "Мастерская артефактора пока закрыта: мастер в отъезде."
     };
 
     function openBuilding(key) {
@@ -50,6 +65,13 @@
       if (key === "arena") showArena();
       if (key === "shop") showShopScene();
       if (key === "tavern") openTavern();
+      if (key === "trade") showTrade();
+    }
+
+    function openTradeBuilding(key) {
+      if (SOON[key]) { el("trade-text").textContent = SOON[key]; return; }
+      if (key === "shop") showShopScene();
+      if (key === "main") showCapital();
     }
 
     // ----- Таверна -----
