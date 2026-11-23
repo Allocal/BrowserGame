@@ -50,6 +50,24 @@
       return wrap;
     }
 
+    // Картинки предметов (img/items). Ключ предмета в игре -> имя файла без расширения.
+    const ITEM_PICS = {
+      sword: "sword", steelSword: "longsword", knife: "knife", steelKnife: "dagger",
+      axe: "axe", greatAxe: "greataxe", staff: "staff", greatStaff: "sagestaff",
+      buckler: "buckler", woodenShield: "shield_wood",
+      flint: "firekit", bedroll: "bedroll", bread: "bread", gladRation: "ration",
+      dogFang: "fang_dog", boarTusk: "tusk_boar", wolfPelt: "pelt_wolf", leaderFang: "fang_leader",
+      amber: "amber", oldRing: "ring", goldNugget: "gold",
+      leatherCap: "leather_head", leatherJerkin: "leather_chest", leatherPants: "leather_legs", leatherBoots: "leather_boots",
+      ironHelm: "iron_head", chainmail: "iron_chest", ironGreaves: "iron_legs", ironBoots: "iron_boots"
+    };
+
+    // Имя файла картинки предмета или null, если её нет. Броня нового вида (steel_head) лежит под своим ключом.
+    function itemPic(key) {
+      if (ITEM_PICS[key]) return ITEM_PICS[key];
+      return /^[a-z]+_(head|chest|legs|boots)$/.test(key) ? key : null;
+    }
+
     // Какой значок у предмета: трофеи, еда и оружие по виду, броня по месту.
     function itemIconName(key) {
       const item = ITEMS[key];

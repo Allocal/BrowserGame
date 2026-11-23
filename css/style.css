@@ -1,4 +1,4 @@
-    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; background: #1b1b22; color: #eee; }
+    body { font-family: system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; background-color: #0b1018; background-image: linear-gradient(rgba(8, 12, 18, 0.6), rgba(8, 12, 18, 0.6)), url(../img/bg/battle_bg.jpg); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat; color: #eee; }
     h1 { margin-bottom: 4px; }
     h2 { margin: 8px 0; }
     h3 { margin: 18px 0 8px; font-size: 1rem; }
@@ -13,10 +13,10 @@
     /* «Главная» и «выбранная» кнопка: рамка со свечением и золотистый текст */
     .primary, .zone.on, .tab.on { border-image-source: url(../img/ui/button_hover.png); border-image-slice: 44 fill; color: #ffe9a8; }
     .zones { display: flex; gap: 8px; flex-wrap: wrap; }
-    .bar { height: 14px; border: solid transparent; border-width: 6px 22px; border-image: url(../img/ui/bar.png) 22 75 fill / 6px 22px stretch; background: none; border-radius: 0; overflow: hidden; }
-    .fill { background: #4caf50; height: 100%; width: 100%; transition: width 0.3s; }
-    .xpfill { background: #6c9bff; width: 0; }
-    .manafill { background: #9a7bff; }
+    .bar { height: 18px; border: solid transparent; border-width: 8px 28px; border-image: url(../img/ui/bar.png) 22 75 fill / 8px 28px stretch; background: none; border-radius: 0; overflow: hidden; }
+    .fill { background: linear-gradient(#e8625a, #b32622 55%, #7a1612); border-radius: 4px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 3px rgba(0, 0, 0, 0.35); height: 100%; width: 100%; transition: width 0.3s; }
+    .xpfill { background: linear-gradient(#ffe08a, #d9a21f 55%, #8a5f0a); width: 0; }
+    .manafill { background: linear-gradient(#8fb4ff, #4a6fe0 55%, #2a3f9a); }
     .arena { display: flex; gap: 16px; }
     .fighter { flex: 1; min-width: 0; }
     .figure { margin-top: 8px; background: #23232d; border-radius: 8px; padding: 6px; transition: filter 0.4s, opacity 0.4s; }
@@ -45,7 +45,7 @@
     .dodge { color: #6fe3ff; font-weight: bold; }
     .result { font-size: 1.2rem; font-weight: bold; margin: 14px 0; }
     .progress { color: #9aa; font-size: 0.9rem; margin-bottom: 6px; }
-    .story-card { background: #23232d; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+    .story-card { background: none; border: 18px solid transparent; border-image: url(../img/ui/panel.png) 44 fill / 18px stretch; padding: 0 6px; margin: 12px 0; }
     .effect { color: #8be28b; font-weight: bold; }
     .status { color: #9aa; margin: 10px 0 16px; }
     .intro { font-style: italic; color: #ccd; }
@@ -81,14 +81,14 @@
 
     /* Лес во весь экран: тот же приём, что у столицы. Карта лежит миникартой в углу, находка и лагерь — кнопки внизу, выбор при встрече — карточка по центру. */
     #dungeon:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
-    #dungeon-scene { width: min(100vw, calc(100vh * 700 / 380)); aspect-ratio: 700 / 380; background: #20212b; border: none; border-radius: 0; }
+    #dungeon-scene { width: min(100vw, calc(100vh * 1376 / 768)); aspect-ratio: 1376 / 768; background: #20212b; border: none; border-radius: 0; }
     #gates:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
     #gates-scene { width: min(100vw, calc(100vh * 1376 / 768)); border: none; border-radius: 0; }
     .gates-list { position: absolute; left: 50%; bottom: 76px; transform: translateX(-50%); z-index: 2; display: flex; gap: 10px; }
     #shopscene:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000; }
     #shop [hidden] { display: none; }
     .sell-group { grid-column: 1 / -1; }
-    #shopscene-box { width: min(100vw, calc(100vh * 1408 / 768)); border: none; border-radius: 0; }
+    #shopscene-box { width: min(100vw, calc(100vh * 1376 / 768)); border: none; border-radius: 0; }
     #shop-zones { position: absolute; inset: 0; width: 100%; height: 100%; }
     .zone { fill: transparent; stroke: transparent; cursor: pointer; transition: fill .15s, stroke .15s; }
     .zone.lit { fill: rgba(255, 214, 120, .16); stroke: #ffd166; stroke-width: 3; stroke-linejoin: round; filter: drop-shadow(0 0 6px #ffd166); }
@@ -139,14 +139,27 @@
     details summary { cursor: pointer; color: #9aa; }
     details p { margin: 8px 0 0; font-size: 0.92rem; }
     .cards .card .btns button { flex: 1 1 auto; }
-    .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+    .itempic { flex: none; box-sizing: border-box; width: 40px; height: 40px; padding: 5px; background: url(../img/ui/slot.png) center / 100% 100% no-repeat; }
+    .itempic img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .orb { position: relative; width: 120px; aspect-ratio: 1; background: url(../img/ui/orb_empty.png) center / contain no-repeat; }
+    .orb-glass { position: absolute; inset: 19%; border-radius: 50%; overflow: hidden; }
+    .orb-liquid { position: absolute; left: 0; right: 0; bottom: 0; height: var(--fill, 100%); background: linear-gradient(#e8625a, #b32622 55%, #7a1612); transition: height 0.3s; }
+    .orb-liquid.mana { background: linear-gradient(#8fb4ff, #4a6fe0 55%, #2a3f9a); }
+    .orb-glass::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 35%); }
+    .hero-orbs { display: flex; gap: 24px; margin-top: 12px; }
+    .orb-col { display: flex; flex-direction: column; align-items: center; width: 170px; }
+    .hero-portrait { position: relative; margin-left: auto; width: 210px; aspect-ratio: 600 / 587; background: url(../img/ui/portrait_frame.png) center / contain no-repeat; }
+    .hero-portrait img { position: absolute; left: 8%; bottom: 8%; width: 84%; height: 84%; object-fit: contain; object-position: center bottom; }
+    .orb-col[hidden] { display: none; }
+    .orb-caption { display: flex; flex-direction: column; align-items: center; margin-top: 4px; font-size: 0.85rem; color: #ccd; text-align: center; }
+    .meters { display: grid; grid-template-columns: 1fr; width: 364px; gap: 14px; margin-top: 12px; }
     .meter-label { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 4px; color: #ccd; }
     .points-banner { margin-top: 14px; padding: 10px 12px; border: 1px solid #6c9bff; background: #1f2a45; border-radius: 8px; }
     .points-banner .btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 10px; } /* wrap: пять вкладок не помещаются в один ряд на телефоне */
     .tab { flex: 1 1 auto; padding: 9px 8px; border-radius: 8px; }
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-    .card { background: #23232d; border: 1px solid #3a3b4a; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .card { background: rgba(14, 24, 36, 0.85); border: 1px solid #2f6670; border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
     .card-title { color: #9aa; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.02em; }
     .big { font-size: 1.6rem; font-weight: bold; line-height: 1.1; }
     .big.small { font-size: 1.15rem; }
@@ -163,7 +176,7 @@
     .card button { margin-top: 6px; padding: 5px 10px; font-size: 0.85rem; }
     .row button, .card button { border-width: 7px; border-image-width: 7px; }
     .card.wide { grid-column: 1 / -1; }
-    .card .name { font-weight: bold; }
+    .card .name { font-weight: bold; font-size: 0.88rem; min-width: 0; overflow-wrap: break-word; }
     .rarity-uncommon { color: #6fdc8c; }
     .rarity-rare { color: #5aa9ff; }
     .rarity-unique { color: #c084fc; }
@@ -181,6 +194,7 @@
     .scene { position: relative; line-height: 0; border: 1px solid #9b8052; border-radius: 12px; overflow: hidden; }
     .scene img { display: block; width: 100%; height: auto; }
     .hotspot { position: absolute; padding: 0; border: 2px solid transparent; border-radius: 12px; background: transparent; cursor: pointer; transition: background .18s, border-color .18s; }
+    button.hotspot, button.hotspot:hover:not(:disabled), button.hotspot:focus-visible { border-image: none; }
     .hotspot:hover, .hotspot:focus-visible { outline: none; border-color: #ffe4a0; background: #fff2c51c; }
     #spot-tavern  { left: 0%;  top: 14%; width: 23%; height: 56%; }
     #spot-guild   { left: 23%; top: 21%; width: 16%; height: 44%; }
@@ -212,6 +226,8 @@
     #battle:not([hidden]) { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; padding: 12px 20px; overflow-y: auto; background: #0b1018 url(../img/bg/battle_bg.jpg) center / cover no-repeat; }
     #battle .arena { flex: 1; align-items: flex-end; }
     #battle .figure { background: none; }
+    #battle .fighter > div { text-align: center; }
+    #battle .bar { box-sizing: border-box; width: 300px; height: 28px; margin: 4px auto; border-width: 7px 24px; border-image-width: 7px 24px; }
     #battle-controls { background: none; border: 18px solid transparent; border-image: url(../img/ui/panel.png) 44 fill / 18px stretch; padding: 4px 10px; }
     #battle .figure svg { height: min(260px, 30vh); } /* на низком окне бойцы ниже, чтобы панель управления поместилась */
     /* Управление боя в две колонки: удары слева, блоки справа, кнопки хода на всю ширину — так панель ниже и помещается в низкое окно */
@@ -223,4 +239,11 @@
     #block-title { grid-column: 2; grid-row: 1; }
     #block-zones { grid-column: 2; grid-row: 2; }
     #battle-controls .actions { grid-column: 1 / -1; grid-row: 4; margin-top: 6px; }
-    #battle-controls #result, #battle-controls #log { grid-column: 1 / -1; }
+    /* Лог и итог боя — отдельная прокручиваемая колонка справа внутри панели: не растягивает панель и не вылезает за рамку. Новые строки добавляются сверху. */
+    #battle-controls { position: relative; padding-right: calc(clamp(240px, 21vw, 340px) + 20px); }
+    #battle-log-box { position: absolute; top: 0; right: 10px; bottom: 0; width: clamp(240px, 21vw, 340px); overflow-y: auto; padding: 4px 8px; font-size: 0.9rem; background: rgba(6, 12, 20, 0.55); border-radius: 6px; }
+    @media (max-height: 740px) { #battle .figure svg { height: 25vh; } }
+    #battle-controls .zones { gap: 4px; }
+    #battle-controls .zone { padding: 6px 10px; }
+    #battle-log-box #result { margin: 0 0 6px; }
+    #battle-log-box #log { margin-top: 6px; padding-top: 6px; }

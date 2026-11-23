@@ -34,6 +34,11 @@
     // Денежные суммы заканчиваются точкой («2 мед.»): лишнюю точку в конце предложения не ставим.
     const sentence = text => (text.endsWith(".") ? text : text + ".");
     const aliveCount = group => group.alive.filter(Boolean).length;
+    // Подземелье пройдено, когда побеждены все его боссы (и хотя бы один босс в нём есть). Тогда выйти к воротам можно с любого места.
+    const dungeonCleared = (state, dungeon) => {
+      const bosses = Object.keys(dungeon.nodes).filter(id => dungeon.nodes[id].boss);
+      return bosses.length > 0 && bosses.every(id => state.bossDown.includes(id));
+    };
 
     // Рисунок карты: видимые узлы и тропы между ними; текущий залит, посещённые закрашены.
     function dungeonMapSvg(state, dungeon) {
@@ -158,8 +163,9 @@
       campBtn.disabled = guarded || !kit || state.campLock > 0 || rested;
 
       const atEntrance = here.kind === "entrance";
-      el("dun-home-btn").hidden = !atEntrance;
-      el("dun-hint").textContent = atEntrance ? "Если выйдешь к воротам, добыча достанется тебе, а подземелье начнётся заново." : "Выход из подземелья только через опушку: вернись по тропам.";
+      const cleared = dungeonCleared(state, dungeon);
+      el("dun-home-btn").hidden = !(atEntrance || cleared);
+      el("dun-hint").textContent = (atEntrance || cleared) ? "Если выйдешь к воротам, добыча достанется тебе, а подземелье начнётся заново." : "Выход из подземелья только через опушку: вернись по тропам.";
       saveGame("capital");
       showScreen("dungeon");
     }
@@ -209,8 +215,9 @@
       const p = journey.player;
       const state = journey.dungeon;
       const t = WILD_ENEMIES[kind];
-      const foe = createEnemy({ ...makeWildEnemy(kind, p.level, 1, scale), name: title });
-      const xp = Math.max(1, Math.round(arenaBaseXp(p.level) * t.xp * xpFactor));
+      const foeLevel = Math.min(p.level, DUNGEONS[state.key].maxEnemyLevel ?? Infinity); // потолок уровня врагов подземелья
+      const foe = createEnemy({ ...makeWildEnemy(kind, foeLevel, 1, scale), name: title });
+      const xp = Math.max(1, Math.round(arenaBaseXp(foeLevel) * t.xp * xpFactor));
       const fighter = { ...p, name: `${p.name} (ур. ${p.level})`, startMana: Math.min(state.mana, p.maxMana) }; // мана между боями захода не возвращается
       saveGame("capital");
       startBattle(fighter, foe, intro, `Подземелье: ${title}`, outcome => {
@@ -224,7 +231,7 @@
         p.health = fighter.health;
         const note = onWin();
         grantRewards(xp, 0);
-        const drops = rollDrops(kind, p.level);
+        const drops = rollDrops(kind, foeLevel);
         addLoot(state, drops.copper, drops.items);
         state.campLock = Math.max(0, state.campLock - 1);
         const dropText = (drops.copper > 0 || Object.keys(drops.items).length) ? `, добыча: ${lootText(drops)}` : ", добычи нет";

@@ -16,11 +16,25 @@
     }
 
     // Значок предмета: цвет берётся у самого предмета (у брони он есть), иначе по виду.
-    function itemIcon(key, size) {
+    function vectorItemIcon(key, size) {
       const ic = icon(itemIconName(key), size);
       const item = ITEMS[key];
       ic.style.color = item.color ?? (item.type === "food" ? "#e0b070" : item.type === "trophy" ? "#c9a27e" : "#d7dbe6");
       return ic;
+    }
+
+    // Картинка предмета в рамке-слоте; если картинки нет или она не загрузилась, остаётся векторный значок.
+    function itemIcon(key, size) {
+      const pic = itemPic(key);
+      if (!pic) return vectorItemIcon(key, size);
+      const frame = document.createElement("span");
+      frame.className = "itempic";
+      const img = document.createElement("img");
+      img.src = `img/items/${pic}.png`;
+      img.alt = "";
+      img.onerror = () => frame.replaceWith(vectorItemIcon(key, size));
+      frame.appendChild(img);
+      return frame;
     }
 
     // Общая карточка: значок и название, пояснение, чипы, кнопки. o: { icon, iconEl, title, sub, chips, buttons, cls }

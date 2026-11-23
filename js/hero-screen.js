@@ -73,12 +73,13 @@
       const need = xpToNext(p.level);
       el("hero-title").textContent = `${p.name}${p.arena?.title ? `, ${titleName(p.arena)}` : ""} · уровень ${p.level}`;
       el("hero-money").textContent = formatMoney(p.copper);
+      el("hero-portrait-img").src = `img/portraits/portrait_${p.classKey}.png`;
       el("hero-xp").textContent = xpLine(p);
       el("hero-xp-bar").style.width = barPercent(p.level >= MAX_LEVEL ? need : p.xp, need);
       el("hero-mana-wrap").hidden = !(p.maxMana > 0);
-      el("hero-mana").textContent = `${p.maxMana} / ${p.maxMana} · полная в начале боя`;
+      el("hero-mana").textContent = `${p.maxMana} / ${p.maxMana}`;
       el("hero-hp").textContent = `${p.health} / ${p.maxHealth}${regenClock(p) ? " · " + regenClock(p) : ""}`;
-      el("hero-hp-bar").style.width = barPercent(p.health, p.maxHealth);
+      el("hero-hp-liquid").style.setProperty("--fill", barPercent(p.health, p.maxHealth));
 
       // Свободные очки — всегда на виду над вкладками, чтобы их не пропустить.
       const banner = el("hero-points");

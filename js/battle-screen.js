@@ -124,7 +124,7 @@
       if (p.health !== before) saveGame("capital");
       if (currentScreen === "hero") {
         el("hero-hp").textContent = `${p.health} / ${p.maxHealth}${regenClock(p) ? " · " + regenClock(p) : ""}`;
-        el("hero-hp-bar").style.width = barPercent(p.health, p.maxHealth);
+        el("hero-hp-liquid").style.setProperty("--fill", barPercent(p.health, p.maxHealth));
       } else updateHud();
     }, 1000);
 
@@ -310,7 +310,7 @@
       el("bot-name").textContent = bot.name;
       el("bot-max").textContent = bot.maxHealth;
       el("bot-gear-name").textContent = `${bot.gear.name} · урон за удар: ${damageText(bot)}${armorLine(bot.gear)}${foeLine(bot, game.player)}`;
-      el("bot-figure").innerHTML = CREATURES[bot.art] ? creatureSvg(bot.art, true) : figureSvg(bot.gear, true);
+      el("bot-figure").innerHTML = (CREATURES[bot.art] || PAINTED[bot.art]) ? creatureSvg(bot.art, true) : figureSvg(bot.gear, true);
       el("bot-queue").textContent = game.reserve.length ? `ещё врагов в очереди: ${game.reserve.length}` : "";
     }
 
