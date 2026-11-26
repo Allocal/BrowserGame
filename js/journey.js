@@ -17,12 +17,28 @@
       if (!journey || journey.phase !== "capital") return null;
       if (!journey.dungeon) return REGEN_SECONDS_FULL;
       const state = journey.dungeon;
-      return nodeIsSafe(state, DUNGEONS[state.key], state.at) ? DUNGEON_RULES.safeRegenSeconds : null;
+      if (!nodeIsSafe(state, DUNGEONS[state.key], state.at)) return null;
+      return state.camp === state.at ? DUNGEON_RULES.safeRegenSeconds / DUNGEON_RULES.campRegenFactor : DUNGEON_RULES.safeRegenSeconds;
+    }
+
+    // Мана мага в подземелье хранится в состоянии захода (state.mana) и растёт по тому же правилу, что и здоровье, но со своими часами manaAt:
+    // у здоровья и маны разные остатки времени, одни часы на двоих давали бы ошибки округления.
+    function syncManaRegen(p, seconds, now) {
+      const state = journey?.dungeon;
+      if (!state || !(p.maxMana > 0)) return;
+      if (seconds === null || state.mana >= p.maxMana) { state.manaAt = now; return; }
+      if (!Number.isFinite(state.manaAt) || state.manaAt > now) { state.manaAt = now; return; }
+      const perManaMs = seconds * 1000 / p.maxMana;
+      const gain = Math.floor((now - state.manaAt) / perManaMs);
+      if (gain <= 0) return;
+      state.mana = Math.min(p.maxMana, state.mana + gain);
+      state.manaAt = state.mana >= p.maxMana ? now : state.manaAt + gain * perManaMs;
     }
 
     function syncRegen(p) {
       const now = Date.now();
       const seconds = regenSecondsHere();
+      syncManaRegen(p, seconds, now);
       if (seconds === null || p.health >= p.maxHealth) { p.regenAt = now; return; }
       if (!Number.isFinite(p.regenAt) || p.regenAt > now) { p.regenAt = now; return; } // часы перевели назад — просто начинаем отсчёт заново
       const perHpMs = seconds * 1000 / p.maxHealth;

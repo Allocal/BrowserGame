@@ -2,7 +2,7 @@
     // Единственный лес игры: старая вылазка удалена, общие помощники (звери, добыча) лежат в wild.js.
     // kind узла: entrance — вход и выход; hunt — охота на группу монстров; boss — босс; secret — скрытое необязательное место.
     // monsters — какой зверь из WILD_ENEMIES, сколько их в группе и scale (множитель силы, подобран замером: обычный монстр отнимает 10–20% здоровья); у одного из них при каждом заходе случайно лежит key.
-    // gate стоит на узле, В КОТОРЫЙ ведёт переход: requires — узел, чей ключ нужен, guard — страж на переходе (зверь × scale, title — имя на экране).
+    // gate стоит на узле, В КОТОРЫЙ ведёт переход: requires — узел (или список узлов), чей ключ нужен, pick — необязательная загадка: { counts: { число ключей: вес } }, в начале захода случайно решается, сколько и какие ключи из requires нужны; guard — страж на переходе (зверь × scale, title — имя на экране).
     // look — осмотр узла: происходит сам при первом входе за заход (кнопок нет). nothing — тексты неудачи, found — тексты находки,
     // loot — что находится (суммы в долях базовой награды арены), reveal — какие скрытые узлы открываются, sure: true — без броска Внимания.
     // Слотовой добычи с боссов здесь нет: лес решено делать не про вещи (снаряжение лишь с шансом из тайников).
@@ -90,9 +90,16 @@
           }
 
           if (node.gate) {
-            const needed = dungeon.nodes[node.gate.requires];
-            if (!needed) bad(`${at}: ворота требуют несуществующий узел «${node.gate.requires}»`);
-            else if (!needed.key) bad(`${at}: ворота требуют ключ из «${node.gate.requires}», а там ключа нет`);
+            [].concat(node.gate.requires).forEach(req => {
+              const needed = dungeon.nodes[req];
+              if (!needed) bad(`${at}: ворота требуют несуществующий узел «${req}»`);
+              else if (!needed.key) bad(`${at}: ворота требуют ключ из «${req}», а там ключа нет`);
+            });
+            if (node.gate.pick) {
+              const pool = [].concat(node.gate.requires);
+              const counts = node.gate.pick.counts ?? {};
+              if (!Object.keys(counts).some(n => Number(n) >= 1 && Number(n) <= pool.length && counts[n] > 0)) bad(`${at}: у загадки ворот нет ни одного допустимого числа ключей (от 1 до ${pool.length}) с весом больше нуля`);
+            }
             const guard = node.gate.guard;
             if (!guard || !WILD_ENEMIES[guard.kind]) bad(`${at}: у ворот неизвестный страж`);
             else if (!(guard.scale > 0) || !guard.title) bad(`${at}: у стража нужны scale больше нуля и title`);

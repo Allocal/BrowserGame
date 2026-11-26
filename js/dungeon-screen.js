@@ -1,9 +1,10 @@
     // ======================= ЭКРАН ПОДЗЕМЕЛЬЯ (новый; старый лес живёт отдельно до шага 6) =======================
     // Состояние захода хранится в journey.dungeon:
-    // { key, at, visible[], visited[], passed[], bossDown[], looked[], groups{узел: {alive[], keyAt}}, keys[], loot, mana, campLock, deaths, log }.
+    // { key, at, visible[], visited[], passed[], bossDown[], looked[], groups{узел: {alive[], keyAt}}, keys[], gateKeys{ворота: [нужные узлы с ключами]}, loot, mana, manaAt, camp, deaths, log }.
+    // camp: узел, где разбит лагерь (null — лагеря нет); пока герой в этом узле, восстановление идёт быстрее. Любой переход лагерь сворачивает..
     // passed — узлы, чьего стража уже победили (путь в них открыт); keys — узлы, чей ключ уже добыт; bossDown — узлы, чей босс убит; looked — узлы, где осмотр за этот заход уже был (один бросок Внимания на узел).
     const DUNGEON_RULES = {
-      campEveryFights: 4,      // сколько побед нужно между стоянками (подобрано замером, см. GDD)
+      campRegenFactor: 3,      // во сколько раз быстрее восстановление, пока разбит лагерь
       defeatHealthShare: 0.3,  // с каким здоровьем герой очнётся на входе после поражения
       guardXpFactor: 2,        // опыт за стража относительно обычного монстра того же вида
       safeRegenSeconds: 180    // сколько секунд реального времени занимает полное восстановление здоровья с нуля в безопасной точке (в городе 600)
@@ -12,6 +13,29 @@
     const dungeonNeighbors = (dungeon, id) => dungeon.links.filter(l => l.includes(id)).map(l => (l[0] === id ? l[1] : l[0]));
     // Ворота стоят на узле, в который ведёт переход. Они открываются победой над стражем; ключ нужен, чтобы вызвать стража на бой.
     const dungeonLocked = (state, dungeon, id) => Boolean(dungeon.nodes[id].gate) && !state.passed.includes(id);
+    // Какие ключи нужны для ворот: requires — один узел или список узлов, чьи ключи годятся. Если для захода уже выбраны нужные
+    // (state.gateKeys[id]), берём их, иначе нужны все из requires. Страж вызывается, когда у героя есть все нужные ключи.
+    const gateRequired = (state, node, id) => state.gateKeys?.[id] ?? [].concat(node.gate.requires);
+    const gateMissing = (state, node, id) => gateRequired(state, node, id).filter(k => !state.keys.includes(k));
+    const keyPhrase = (dungeon, k) => `«${dungeon.nodes[k].key}» (у одного из монстров места «${dungeon.nodes[k].name}»)`;
+
+    // Загадка ворот: для ворот с pick в начале каждого захода случайно решается, сколько ключей нужно (по весам pick.counts, не больше, чем
+    // в requires) и какие именно. Игрок этого заранее не знает. Список хранится в state.gateKeys и переживает перезагрузку.
+    const shuffled = list => {
+      const out = [...list];
+      for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
+      return out;
+    };
+    function rollGateFor(node) {
+      const pool = [].concat(node.gate.requires);
+      const counts = Object.fromEntries(Object.entries(node.gate.pick.counts).filter(([n]) => Number(n) <= pool.length));
+      return shuffled(pool).slice(0, Number(pickWeighted(counts)));
+    }
+    function rollGateKeys(dungeon) {
+      const out = {};
+      Object.entries(dungeon.nodes).forEach(([id, node]) => { if (node.gate?.pick) out[id] = rollGateFor(node); });
+      return out;
+    }
 
     function startDungeon(key) {
       if (!journey.dungeon) {
@@ -20,7 +44,7 @@
         syncRegen(p);
         journey.dungeon = {
           key, at: dungeon.start, visible: Object.keys(dungeon.nodes).filter(id => dungeon.nodes[id].visible), visited: [dungeon.start], passed: [], bossDown: [], looked: [],
-          groups: {}, keys: [], loot: { copper: 0, items: {}, gear: [] }, mana: p.maxMana, campLock: 0, deaths: 0, log: dungeon.intro
+          groups: {}, keys: [], gateKeys: rollGateKeys(dungeon), loot: { copper: 0, items: {}, gear: [] }, mana: p.maxMana, camp: null, deaths: 0, log: dungeon.intro
         };
       }
       showDungeon();
@@ -74,13 +98,14 @@
       const state = journey.dungeon;
       const dungeon = DUNGEONS[state.key];
       if (dungeonLocked(state, dungeon, id)) {
-        const gate = dungeon.nodes[id].gate;
-        if (state.keys.includes(gate.requires)) { startGuardFight(id); return; }
-        state.log = `Путь закрыт. Нужен ключ «${dungeon.nodes[gate.requires].key}»: он есть у одного из монстров места «${dungeon.nodes[gate.requires].name}».`;
+        const missing = gateMissing(state, dungeon.nodes[id], id);
+        if (!missing.length) { startGuardFight(id); return; }
+        state.log = `Путь закрыт. Не хватает ${missing.length > 1 ? "ключей" : "ключа"}: ${missing.map(k => keyPhrase(dungeon, k)).join(", ")}.`;
         showDungeon();
         return;
       }
       state.at = id;
+      state.camp = null;
       if (!state.visited.includes(id)) state.visited.push(id);
       state.log = lookAroundNode(id);
       showDungeon();
@@ -100,10 +125,10 @@
       dungeonNeighbors(dungeon, state.at).filter(id => state.visible.includes(id)).forEach(id => {
         const node = dungeon.nodes[id];
         if (!dungeonLocked(state, dungeon, id)) return;
-        const keyName = dungeon.nodes[node.gate.requires].key;
-        lines.push(state.keys.includes(node.gate.requires)
-          ? `Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Ключ «${keyName}» у тебя: можно вызвать стража на бой.`
-          : `Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Чтобы пройти, нужен ключ «${keyName}».`);
+        const missing = gateMissing(state, node, id);
+        lines.push(!missing.length
+          ? `Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Нужные ключи у тебя: можно вызвать стража на бой.`
+          : `Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Чтобы пройти, не хватает ${missing.length > 1 ? "ключей" : "ключа"}: ${missing.map(k => `«${dungeon.nodes[k].key}»`).join(", ")}.`);
       });
       return lines;
     }
@@ -152,7 +177,7 @@
         const dx = node.x - here.x, dy = node.y - here.y;
         const len = Math.hypot(dx, dy);
         const locked = dungeonLocked(state, dungeon, id);
-        const guardReady = locked && state.keys.includes(node.gate.requires);
+        const guardReady = locked && !gateMissing(state, node, id).length;
         const btn = makeButton(`${node.name}${guardReady ? " · страж" : locked ? " · закрыто" : ""}`, () => travelInDungeon(id));
         btn.className = `arrow${state.visited.includes(id) ? " seen" : ""}${locked && !guardReady ? " locked" : ""}${guardReady ? " danger" : ""}`;
         btn.style.left = `${Math.min(72, 50 + dx / len * 38)}%`; // не заходим на мини-карту справа
@@ -164,12 +189,13 @@
       const guarded = (Boolean(group) && aliveCount(group) > 0) || bossAlive;
       const kit = hasKit(p);
       const rested = p.health >= p.maxHealth && state.mana >= p.maxMana;
+      const camped = state.camp === state.at;
       campBtn.textContent = guarded ? "Лагерь: здесь обитают враги"
         : !kit ? "Лагерь: нужны огниво и спальник"
-        : state.campLock > 0 ? `Лагерь: ещё побед — ${state.campLock}`
+        : camped ? "Лагерь разбит: отдых идёт быстрее"
         : rested ? "Лагерь: ты полон сил"
         : "Разбить лагерь";
-      campBtn.disabled = guarded || !kit || state.campLock > 0 || rested;
+      campBtn.disabled = guarded || !kit || camped || rested;
 
       const atEntrance = here.kind === "entrance";
       const cleared = dungeonCleared(state, dungeon);
@@ -207,13 +233,10 @@
     function makeDungeonCamp() {
       const p = journey.player;
       const state = journey.dungeon;
-      const group = state.groups[state.at];
-      const boss = DUNGEONS[state.key].nodes[state.at].boss;
-      if (!hasKit(p) || state.campLock > 0 || (group && aliveCount(group) > 0) || (boss && !state.bossDown.includes(state.at))) return;
-      p.health = p.maxHealth;
-      state.mana = p.maxMana;
-      state.campLock = DUNGEON_RULES.campEveryFights;
-      state.log = "Ты развёл костёр и отдохнул. Здоровье и мана восстановились.";
+      if (!hasKit(p) || state.camp === state.at || !nodeIsSafe(state, DUNGEONS[state.key], state.at)) return;
+      syncRegen(p); // сначала засчитываем отдых до лагеря по прежней скорости, потом скорость меняется
+      state.camp = state.at;
+      state.log = "Ты развёл костёр и устроился на отдых. Здоровье и мана восстанавливаются быстрее, пока ты здесь. Любой переход сворачивает лагерь.";
       showDungeon();
     }
 
@@ -232,6 +255,7 @@
       startBattle(fighter, foe, intro, `Подземелье: ${title}`, outcome => {
         recordFight("wild", outcome);
         p.regenAt = Date.now(); // время боя не засчитывается как отдых
+        state.manaAt = Date.now();
         state.mana = fighter.mana ?? state.mana;
         if (outcome !== "win") {
           // Ничья: враг остаётся жив. Иначе, если упал носитель ключа, а ключ не выдан, заход стал бы непроходимым.
@@ -243,7 +267,6 @@
         grantRewards(xp, 0);
         const drops = rollDrops(kind, foeLevel);
         addLoot(state, drops.copper, drops.items);
-        state.campLock = Math.max(0, state.campLock - 1);
         const dropText = (drops.copper > 0 || Object.keys(drops.items).length) ? `, добыча: ${lootText(drops)}` : ", добычи нет";
         state.log = `Победа над врагом «${title}»: опыт +${xp}${sentence(dropText)}${note}`;
         saveGame("capital");
@@ -289,13 +312,15 @@
     // Бой со стражем на переходе в закрытый узел: победа открывает путь и переносит героя в узел. Ключ при этом остаётся.
     function startGuardFight(nodeId) {
       const state = journey.dungeon;
-      const gate = DUNGEONS[state.key].nodes[nodeId].gate;
-      if (!state.keys.includes(gate.requires) || state.passed.includes(nodeId)) return;
+      const node = DUNGEONS[state.key].nodes[nodeId];
+      const gate = node.gate;
+      if (gateMissing(state, node, nodeId).length || state.passed.includes(nodeId)) return;
       dungeonBattle({
         kind: gate.guard.kind, scale: gate.guard.scale, title: gate.guard.title, intro: `Путь преграждает: ${gate.guard.title}.`, xpFactor: DUNGEON_RULES.guardXpFactor,
         onWin: () => {
           state.passed.push(nodeId);
           state.at = nodeId;
+          state.camp = null;
           if (!state.visited.includes(nodeId)) state.visited.push(nodeId);
           return ` Путь открыт. ${lookAroundNode(nodeId)}`.trimEnd();
         }
@@ -310,8 +335,9 @@
       state.deaths += 1;
       state.at = DUNGEONS[state.key].start;
       p.regenAt = Date.now();
+      state.manaAt = Date.now();
       state.loot = { copper: 0, items: {}, gear: [] };
-      state.campLock = 0;
+      state.camp = null;
       state.log = "Тебя нашли и вынесли на опушку. Всё найденное в походе потеряно, а убитые монстры так и остались убитыми.";
       showDungeon();
     }
@@ -345,9 +371,18 @@
       const loot = { copper: Number.isFinite(raw.loot?.copper) ? raw.loot.copper : 0, items: {}, gear: Array.isArray(raw.loot?.gear) ? raw.loot.gear : [] };
       Object.entries(raw.loot?.items ?? {}).forEach(([key, n]) => { if (ITEMS[key] && Number.isFinite(n) && n > 0) loot.items[key] = n; });
       const visible = [...new Set([dungeon.start, raw.at, ...list(raw.visible)])];
+      // Выбранные ключи ворот: берём сохранённые, если они согласуются с данными (подземелье могло измениться), иначе бросаем заново.
+      const gateKeys = {};
+      Object.entries(dungeon.nodes).forEach(([id, node]) => {
+        if (!node.gate?.pick) return;
+        const pool = [].concat(node.gate.requires);
+        const saved = raw.gateKeys?.[id];
+        const fine = Array.isArray(saved) && saved.length >= 1 && new Set(saved).size === saved.length && saved.every(k => pool.includes(k));
+        gateKeys[id] = fine ? saved : rollGateFor(node);
+      });
       return {
-        key: raw.key, at: raw.at, visible, visited: [...new Set([dungeon.start, ...list(raw.visited)])], passed: list(raw.passed).filter(id => Boolean(dungeon.nodes[id].gate)), bossDown: list(raw.bossDown).filter(id => Boolean(dungeon.nodes[id].boss)), looked: list(raw.looked).filter(id => Boolean(dungeon.nodes[id].look)), groups, keys: list(raw.keys), loot,
-        mana: Number.isFinite(raw.mana) ? raw.mana : 0, campLock: Number.isInteger(raw.campLock) && raw.campLock >= 0 ? raw.campLock : 0,
+        key: raw.key, at: raw.at, gateKeys, visible, visited: [...new Set([dungeon.start, ...list(raw.visited)])], passed: list(raw.passed).filter(id => Boolean(dungeon.nodes[id].gate)), bossDown: list(raw.bossDown).filter(id => Boolean(dungeon.nodes[id].boss)), looked: list(raw.looked).filter(id => Boolean(dungeon.nodes[id].look)), groups, keys: list(raw.keys), loot,
+        mana: Number.isFinite(raw.mana) ? raw.mana : 0, camp: raw.camp === raw.at ? raw.camp : null,
         deaths: Number.isInteger(raw.deaths) ? raw.deaths : 0, log: typeof raw.log === "string" ? raw.log : ""
       };
     }
