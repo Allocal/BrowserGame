@@ -1,6 +1,6 @@
     // ======================= ЭКРАН ПОДЗЕМЕЛЬЯ (новый; старый лес живёт отдельно до шага 6) =======================
     // Состояние захода хранится в journey.dungeon:
-    // { key, at, visible[], visited[], passed[], bossDown[], looked[], groups{узел: {alive[], keyAt}}, keys[], gateKeys{ворота: [нужные узлы с ключами]}, loot, mana, manaAt, camp, deaths, log }.
+    // { key, at, visible[], visited[], passed[], bossDown[], looked[], groups{узел: {alive[], keyAt}}, keys[], gateKeys{ворота: [нужные узлы с ключами]}, gateKnown[ворота, чью загадку игрок уже разгадал], loot, mana, manaAt, camp, deaths, log }.
     // camp: узел, где разбит лагерь (null — лагеря нет); пока герой в этом узле, восстановление идёт быстрее. Любой переход лагерь сворачивает..
     // passed — узлы, чьего стража уже победили (путь в них открыт); keys — узлы, чей ключ уже добыт; bossDown — узлы, чей босс убит; looked — узлы, где осмотр за этот заход уже был (один бросок Внимания на узел).
     const DUNGEON_RULES = {
@@ -17,6 +17,15 @@
     // (state.gateKeys[id]), берём их, иначе нужны все из requires. Страж вызывается, когда у героя есть все нужные ключи.
     const gateRequired = (state, node, id) => state.gateKeys?.[id] ?? [].concat(node.gate.requires);
     const gateMissing = (state, node, id) => gateRequired(state, node, id).filter(k => !state.keys.includes(k));
+    // Знает ли игрок, какие ключи нужны для ворот. Ворота без загадки (pick) известны сразу; с загадкой узнаются по подсказке (state.gateKnown).
+    const gateKnown = (state, node, id) => !node.gate.pick || state.gateKnown.includes(id);
+    const keysWord = n => (n === 1 ? "одного ключа" : `ключей: ${n}`);
+    // Фраза-подсказка про загадку: какие ключи нужны. Вызывается, когда подсказка найдена.
+    function clueLine(state, dungeon, id) {
+      const node = dungeon.nodes[id];
+      const names = gateRequired(state, node, id).map(k => `«${dungeon.nodes[k].key}»`);
+      return names.length === 1 ? `Чтобы пройти к месту «${node.name}», нужен один ключ: ${names[0]}.` : `Чтобы пройти к месту «${node.name}», нужны ключи: ${names.join(", ")}.`;
+    }
     const keyPhrase = (dungeon, k) => `«${dungeon.nodes[k].key}» (у одного из монстров места «${dungeon.nodes[k].name}»)`;
 
     // Загадка ворот: для ворот с pick в начале каждого захода случайно решается, сколько ключей нужно (по весам pick.counts, не больше, чем
@@ -44,8 +53,11 @@
         syncRegen(p);
         journey.dungeon = {
           key, at: dungeon.start, visible: Object.keys(dungeon.nodes).filter(id => dungeon.nodes[id].visible), visited: [dungeon.start], passed: [], bossDown: [], looked: [],
-          groups: {}, keys: [], gateKeys: rollGateKeys(dungeon), loot: { copper: 0, items: {}, gear: [] }, mana: p.maxMana, camp: null, deaths: 0, log: dungeon.intro
+          groups: {}, keys: [], gateKeys: rollGateKeys(dungeon), gateKnown: [], loot: { copper: 0, items: {}, gear: [] }, mana: p.maxMana, camp: null, deaths: 0, log: dungeon.intro
         };
+        // Осмотр входа происходит сразу: на опушке можно найти записку (первый вход за заход, как в любом другом узле).
+        const first = lookAroundNode(dungeon.start);
+        if (first) journey.dungeon.log = `${dungeon.intro} ${first}`;
       }
       showDungeon();
     }
@@ -76,8 +88,8 @@
     // Рисунок карты: видимые узлы и тропы между ними; текущий залит, посещённые закрашены.
     function dungeonMapSvg(state, dungeon) {
       const xs = state.visible.map(id => dungeon.nodes[id].x), ys = state.visible.map(id => dungeon.nodes[id].y);
-      const [vx, vy] = [Math.min(...xs) - 14, Math.min(...ys) - 10];
-      const [vw, vh] = [Math.max(...xs) + 14 - vx, Math.max(...ys) + 14 - vy];
+      const [vx, vy] = [Math.min(...xs) - 26, Math.min(...ys) - 10]; // по бокам запас шире: подписи мест длиннее, чем кружки
+      const [vw, vh] = [Math.max(...xs) + 26 - vx, Math.max(...ys) + 14 - vy];
       let svg = `<svg viewBox="${vx} ${vy} ${vw} ${vh}" class="map-svg" aria-label="Карта подземелья">`;
       dungeon.links.forEach(([a, b]) => {
         if (state.visible.includes(a) && state.visible.includes(b)) {
@@ -85,11 +97,15 @@
           svg += `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="map-path"/>`;
         }
       });
+      // Места, куда ведёт тропа из текущего, кликабельны (тот же переход, что в панели «Куда идти»); остальные только показаны.
+      const goable = new Set(dungeonNeighbors(dungeon, state.at));
       state.visible.forEach(id => {
         const node = dungeon.nodes[id];
         const cls = id === state.at ? "here" : (state.visited.includes(id) ? "seen" : "new");
-        svg += `<circle cx="${node.x}" cy="${node.y}" r="${id === state.at ? 4.2 : 3.2}" class="map-node ${cls}"/>`
-             + `<text x="${node.x}" y="${node.y + 8.5}" class="map-label">${node.name}</text>`;
+        const body = `<circle cx="${node.x}" cy="${node.y}" r="7" class="map-hit"/>`
+                   + `<circle cx="${node.x}" cy="${node.y}" r="${id === state.at ? 4.2 : 3.2}" class="map-node ${cls}"/>`
+                   + `<text x="${node.x}" y="${node.y + 8.5}" class="map-label">${node.name}</text>`;
+        svg += goable.has(id) ? `<g class="map-go" data-go="${id}">${body}</g>` : `<g>${body}</g>`;
       });
       return svg + "</svg>";
     }
@@ -98,9 +114,20 @@
       const state = journey.dungeon;
       const dungeon = DUNGEONS[state.key];
       if (dungeonLocked(state, dungeon, id)) {
-        const missing = gateMissing(state, dungeon.nodes[id], id);
+        const node = dungeon.nodes[id];
+        const missing = gateMissing(state, node, id);
         if (!missing.length) { startGuardFight(id); return; }
-        state.log = `Путь закрыт. Не хватает ${missing.length > 1 ? "ключей" : "ключа"}: ${missing.map(k => keyPhrase(dungeon, k)).join(", ")}.`;
+        if (gateKnown(state, node, id)) {
+          state.log = `Путь закрыт. Не хватает ${missing.length > 1 ? "ключей" : "ключа"}: ${missing.map(k => keyPhrase(dungeon, k)).join(", ")}.`;
+        } else {
+          // Загадка не разгадана: ворота не называют нужные ключи, но говорят, какие из имеющихся не подходят и сколько ещё не хватает.
+          const needed = gateRequired(state, node, id);
+          const wrong = [].concat(node.gate.requires).filter(k => state.keys.includes(k) && !needed.includes(k));
+          const parts = ["Ворота не открываются."];
+          if (wrong.length) parts.push(`Ключ ${wrong.map(k => `«${dungeon.nodes[k].key}»`).join(", ")} не подходит.`);
+          parts.push(`Не хватает ещё ${keysWord(missing.length)}.`);
+          state.log = parts.join(" ");
+        }
         showDungeon();
         return;
       }
@@ -126,11 +153,23 @@
         const node = dungeon.nodes[id];
         if (!dungeonLocked(state, dungeon, id)) return;
         const missing = gateMissing(state, node, id);
+        if (!gateKnown(state, node, id)) { lines.push(`Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Какие ключи нужны, ты пока не знаешь: ищи подсказку.`); return; }
         lines.push(!missing.length
           ? `Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Нужные ключи у тебя: можно вызвать стража на бой.`
           : `Путь к месту «${node.name}» охраняет ${node.gate.guard.title}. Чтобы пройти, не хватает ${missing.length > 1 ? "ключей" : "ключа"}: ${missing.map(k => `«${dungeon.nodes[k].key}»`).join(", ")}.`);
       });
       return lines;
+    }
+
+    // Что игрок знает о месте, куда ведёт тропа: пометка и стиль кнопки. Про места, где ещё не был, враги неизвестны (группа создаётся при первом входе).
+    function exitTag(state, dungeon, id) {
+      const node = dungeon.nodes[id];
+      if (dungeonLocked(state, dungeon, id)) return gateMissing(state, node, id).length ? { text: "закрыто: нужны ключи", kind: "locked" } : { text: "ключи есть: вызвать стража", kind: "danger" };
+      if (!state.visited.includes(id)) return { text: "ещё не был", kind: "" };
+      const group = state.groups[id];
+      if (group && aliveCount(group) > 0) return { text: `были враги ×${aliveCount(group)}`, kind: "seen danger" };
+      if (node.boss && !state.bossDown.includes(id)) return { text: "логово", kind: "seen danger" };
+      return { text: "безопасно", kind: "seen safe" };
     }
 
     function showDungeon() {
@@ -170,19 +209,29 @@
         monsters.appendChild(card);
       }
 
-      const arrows = el("dun-arrows");
-      arrows.replaceChildren();
-      dungeonNeighbors(dungeon, state.at).filter(id => state.visible.includes(id)).forEach(id => {
-        const node = dungeon.nodes[id];
-        const dx = node.x - here.x, dy = node.y - here.y;
-        const len = Math.hypot(dx, dy);
-        const locked = dungeonLocked(state, dungeon, id);
-        const guardReady = locked && !gateMissing(state, node, id).length;
-        const btn = makeButton(`${node.name}${guardReady ? " · страж" : locked ? " · закрыто" : ""}`, () => travelInDungeon(id));
-        btn.className = `arrow${state.visited.includes(id) ? " seen" : ""}${locked && !guardReady ? " locked" : ""}${guardReady ? " danger" : ""}`;
-        btn.style.left = `${Math.min(72, 50 + dx / len * 38)}%`; // не заходим на мини-карту справа
-        btn.style.top = `${50 + dy / len * 26}%`;
-        arrows.appendChild(btn);
+      // Панель «Куда идти»: все тропы из этого места списком, с пометкой, что там известно.
+      const exits = el("dun-exits");
+      exits.replaceChildren();
+      const exitIds = dungeonNeighbors(dungeon, state.at).filter(id => state.visible.includes(id));
+      if (exitIds.length) {
+        const title = document.createElement("h3");
+        title.textContent = "Куда идти";
+        exits.appendChild(title);
+      }
+      exitIds.forEach(id => {
+        const { text, kind } = exitTag(state, dungeon, id);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `exit-btn ${kind}`;
+        const name = document.createElement("span");
+        name.className = "exit-name";
+        name.textContent = dungeon.nodes[id].name;
+        const tag = document.createElement("span");
+        tag.className = "exit-tag";
+        tag.textContent = text;
+        btn.append(name, tag);
+        btn.addEventListener("click", () => travelInDungeon(id));
+        exits.appendChild(btn);
       });
 
       const campBtn = el("dun-camp-btn");
@@ -221,6 +270,10 @@
           const gearNote = found.gear && found.gear.bonuses.length ? ` (${bonusLines(found.gear).join(", ")})` : "";
           parts.push(`Ты нашёл: ${lootText({ copper: found.copper, items: found.items, gear: found.gear ? [found.gear] : [] })}${gearNote}`);
         }
+      }
+      if (look.clue && !state.gateKnown.includes(look.clue)) {
+        state.gateKnown.push(look.clue);
+        parts.push(clueLine(state, DUNGEONS[state.key], look.clue));
       }
       if (look.reveal) {
         const hidden = look.reveal.nodes.filter(n => !state.visible.includes(n));
@@ -380,8 +433,9 @@
         const fine = Array.isArray(saved) && saved.length >= 1 && new Set(saved).size === saved.length && saved.every(k => pool.includes(k));
         gateKeys[id] = fine ? saved : rollGateFor(node);
       });
+      const gateKnown = list(raw.gateKnown).filter(id => Boolean(dungeon.nodes[id].gate?.pick));
       return {
-        key: raw.key, at: raw.at, gateKeys, visible, visited: [...new Set([dungeon.start, ...list(raw.visited)])], passed: list(raw.passed).filter(id => Boolean(dungeon.nodes[id].gate)), bossDown: list(raw.bossDown).filter(id => Boolean(dungeon.nodes[id].boss)), looked: list(raw.looked).filter(id => Boolean(dungeon.nodes[id].look)), groups, keys: list(raw.keys), loot,
+        key: raw.key, at: raw.at, gateKeys, gateKnown, visible, visited: [...new Set([dungeon.start, ...list(raw.visited)])], passed: list(raw.passed).filter(id => Boolean(dungeon.nodes[id].gate)), bossDown: list(raw.bossDown).filter(id => Boolean(dungeon.nodes[id].boss)), looked: list(raw.looked).filter(id => Boolean(dungeon.nodes[id].look)), groups, keys: list(raw.keys), loot,
         mana: Number.isFinite(raw.mana) ? raw.mana : 0, camp: raw.camp === raw.at ? raw.camp : null,
         deaths: Number.isInteger(raw.deaths) ? raw.deaths : 0, log: typeof raw.log === "string" ? raw.log : ""
       };

@@ -1,12 +1,12 @@
     // ======================= ПОДЗЕМЕЛЬЯ (только данные, ничего не рисует и не считает) =======================
     // Единственный лес игры: старая вылазка удалена, общие помощники (звери, добыча) лежат в wild.js.
-    // kind узла: entrance — вход и выход; hunt — охота на группу монстров; boss — босс; secret — скрытое необязательное место.
+    // kind узла: entrance — вход и выход; hunt — охота на группу монстров; boss — босс; secret — скрытое необязательное место; quiet — тихое место без врагов (безопасное).
     // monsters — какой зверь из WILD_ENEMIES, сколько их в группе и scale (множитель силы, подобран замером: обычный монстр отнимает 10–20% здоровья); у одного из них при каждом заходе случайно лежит key.
     // gate стоит на узле, В КОТОРЫЙ ведёт переход: requires — узел (или список узлов), чей ключ нужен, pick — необязательная загадка: { counts: { число ключей: вес } }, в начале захода случайно решается, сколько и какие ключи из requires нужны; guard — страж на переходе (зверь × scale, title — имя на экране).
     // look — осмотр узла: происходит сам при первом входе за заход (кнопок нет). nothing — тексты неудачи, found — тексты находки,
-    // loot — что находится (суммы в долях базовой награды арены), reveal — какие скрытые узлы открываются, sure: true — без броска Внимания.
+    // loot — что находится (суммы в долях базовой награды арены), reveal — какие скрытые узлы открываются, clue — узел с воротами, чью загадку выдаёт успешный осмотр (игрок узнаёт, какие ключи нужны), sure: true — без броска Внимания.
     // Слотовой добычи с боссов здесь нет: лес решено делать не про вещи (снаряжение лишь с шансом из тайников).
-    const NODE_KINDS = ["entrance", "hunt", "boss", "secret"];
+    const NODE_KINDS = ["entrance", "quiet", "hunt", "boss", "secret"];
 
     const DUNGEONS = {
       darkForest: {
@@ -15,44 +15,77 @@
         start: "edge",
         maxEnemyLevel: 20, // лес рассчитан на уровни 1–20: выше враги и награды больше не растут (см. GDD, «Диапазоны подземелий»)
         nodes: {
-          edge:     { name: "Опушка", kind: "entrance", x: 50, y: 90, image: "img/bg/forest_edge.jpg", visible: true,
-                      text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться к воротам." },
-          clearing: { name: "Поляна", kind: "hunt", x: 26, y: 66, image: "img/bg/forest_glade.jpg", visible: true,
-                      text: "Тихая поляна среди старых деревьев, трава покрыта инеем.",
-                      monsters: { kind: "wolf", count: 4, scale: 0.65 }, key: "Волчья метка",
-                      look: {
-                        nothing: ["Ты осмотрел поляну: трава высокая, следов почти нет, ничего интересного."],
-                        found: ["В высокой траве у поваленного ствола что-то блеснуло. Подойдя ближе, ты нашёл несколько монет."],
-                        loot: { copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } } },
-          brook:    { name: "Ручей", kind: "hunt", x: 70, y: 56, image: "img/bg/forest_clearing.jpg", visible: true,
-                      text: "Быстрый ручей. На влажной земле видны следы зверей.",
-                      monsters: { kind: "boar", count: 3, scale: 0.7 }, key: "Кабаний клык",
-                      gate: { requires: "clearing", guard: { kind: "wolf", scale: 1, title: "Матёрый волк" } },
-                      look: {
-                        nothing: ["Ты осмотрел берег: вода да мокрые камни, ничего интересного."],
-                        found: ["У самой воды среди камней что-то блеснуло. Ты достал из ила несколько монет."],
-                        loot: { copper: [0.1, 0.4] } } },
-          hut:      { name: "Заброшенная сторожка", kind: "hunt", x: 42, y: 36, image: "img/bg/forest_hut.jpg", visible: true,
-                      text: "Покосившаяся сторожка лесника. Давно никто не заходил.",
-                      monsters: { kind: "bandit", count: 3, scale: 0.7 }, key: "Ключ лесника",
-                      gate: { requires: "brook", guard: { kind: "boar", scale: 1, title: "Старый секач" } },
-                      look: {
-                        nothing: ["Ты заглянул в сторожку: пыль, паутина и пустые полки."],
-                        found: ["В щели между брёвен лежал свёрток: кто-то спрятал его и забыл."],
-                        loot: { copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7, gear: { chance: 0.35, rarity: { common: 70, uncommon: 25, rare: 5 } } },
-                        reveal: { nodes: ["oak"], text: "Из окна ты заметил среди деревьев тропу, ведущую к огромному дубу." } } },
-          wolfpath: { name: "Волчья тропа", kind: "boss", x: 70, y: 14, image: "img/bg/forest_wolfpath.jpg", visible: true,
-                      text: "Тропа, вытоптанная лапами. Здесь живёт вожак стаи.",
-                      boss: { kind: "leader", scale: 0.85 },
-                      gate: { requires: "hut", guard: { kind: "bandit", scale: 1, title: "Главарь разбойников" } } },
-          oak:      { name: "Старый дуб", kind: "secret", x: 12, y: 30, image: "img/bg/forest_oak.jpg", visible: false,
-                      text: "Огромный дуб, в дупле которого кто-то оставил сундучок.",
-                      look: {
-                        sure: true,
-                        found: ["В дупле огромного дуба стоит сундучок. Ты открыл его."],
-                        loot: { copper: [1.0, 2.5], rareBoost: 4 } } }
+          edge:      { name: "Опушка", kind: "entrance", x: 50, y: 92, image: "img/bg/forest_edge.jpg", visible: true,
+                       text: "Здесь кончается дорога от городских ворот. Отсюда можно вернуться к воротам.",
+                       look: {
+                         nothing: ["Ты осмотрел опушку: следы колёс, сломанные ветки, ничего особенного."],
+                         found: ["У корней придорожного дерева лежит выцветшая записка: кто-то уже ходил этим лесом и оставил заметки для других."],
+                         clue: "wolfpath" } },
+          clearing:  { name: "Поляна", kind: "quiet", x: 50, y: 76, image: "img/bg/forest_glade.jpg", visible: true,
+                       text: "Тихая поляна среди старых деревьев, трава покрыта инеем. Тропы расходятся к ручью, к сторожке и в овраг, а ещё одна ведёт вглубь леса.",
+                       look: {
+                         nothing: ["Ты осмотрел поляну: трава высокая, следов почти нет, ничего интересного."],
+                         found: ["В высокой траве у поваленного ствола что-то блеснуло. Подойдя ближе, ты нашёл несколько монет."],
+                         loot: { copper: [0.2, 0.8], items: { bread: 1 }, itemChance: 0.4 } } },
+          brook:     { name: "Ручей", kind: "hunt", x: 84, y: 66, image: "img/bg/forest_clearing.jpg", visible: true,
+                       text: "Быстрый ручей. На влажной земле видны следы кабанов.",
+                       monsters: { kind: "boar", count: 3, scale: 0.7 }, key: "Кабаний клык",
+                       look: {
+                         nothing: ["Ты осмотрел берег: вода да мокрые камни, ничего интересного."],
+                         found: ["У самой воды среди камней что-то блеснуло. Ты достал из ила несколько монет."],
+                         loot: { copper: [0.1, 0.4] },
+                         reveal: { nodes: ["mill"], text: "Вдоль ручья ты заметил тропку, ведущую к старой мельнице." } } },
+          mill:      { name: "Старая мельница", kind: "secret", x: 88, y: 40, image: "img/bg/forest_clearing.jpg", visible: false,
+                       text: "Полуразрушенная мельница у ручья. Колесо давно не вертится.",
+                       look: {
+                         sure: true,
+                         found: ["На чердаке мельницы ты нашёл забытый мешок."],
+                         loot: { copper: [0.6, 1.6], items: { bread: 2 }, itemChance: 0.8 } } },
+          hut:       { name: "Заброшенная сторожка", kind: "hunt", x: 18, y: 66, image: "img/bg/forest_hut.jpg", visible: true,
+                       text: "Покосившаяся сторожка лесника. Давно никто не заходил.",
+                       monsters: { kind: "bandit", count: 3, scale: 0.7 }, key: "Ключ лесника",
+                       look: {
+                         nothing: ["Ты заглянул в сторожку: пыль, паутина и пустые полки."],
+                         found: ["В щели между брёвен лежал свёрток: кто-то спрятал его и забыл."],
+                         loot: { copper: [0.3, 1.2], items: { bread: 2 }, itemChance: 0.7 },
+                         reveal: { nodes: ["cellar"], text: "За сторожкой ты заметил в земле люк: ход в погреб." } } },
+          cellar:    { name: "Погреб лесника", kind: "secret", x: 12, y: 40, image: "img/bg/forest_hut.jpg", visible: false,
+                       text: "Тёмный погреб под сторожкой. Здесь хранили то, что не хотели показывать.",
+                       look: {
+                         sure: true,
+                         found: ["В погребе, за бочками, стоит ящик, забытый хозяином."],
+                         loot: { copper: [0.8, 1.8], gear: { chance: 0.4, rarity: { common: 70, uncommon: 25, rare: 5 } } } } },
+          ravine:    { name: "Овраг", kind: "hunt", x: 36, y: 52, image: "img/bg/forest_wolfpath.jpg", visible: true,
+                       text: "Глубокий овраг, заросший папоротником. По склонам вытоптаны волчьи тропы.",
+                       monsters: { kind: "wolf", count: 3, scale: 0.7 }, key: "Волчья метка",
+                       look: {
+                         nothing: ["Ты осмотрел склоны оврага: следы лап, но ничего ценного."],
+                         found: ["В папоротнике лежала старая сумка: её хозяин не вернулся."],
+                         loot: { copper: [0.2, 0.7] },
+                         reveal: { nodes: ["oak"], text: "На краю оврага, среди деревьев, ты заметил огромный старый дуб." } } },
+          oak:       { name: "Старый дуб", kind: "secret", x: 36, y: 26, image: "img/bg/forest_oak.jpg", visible: false,
+                       text: "Огромный дуб, в дупле которого кто-то оставил сундучок.",
+                       look: {
+                         sure: true,
+                         found: ["В дупле огромного дуба стоит сундучок. Ты открыл его."],
+                         loot: { copper: [1.0, 2.5], rareBoost: 4 } } },
+          crossroads: { name: "Перекрёсток", kind: "quiet", x: 62, y: 48, image: "img/bg/forest_glade.jpg", visible: true,
+                        text: "Перекрёсток троп. Здесь стоит старое кострище: путники останавливаются у него, прежде чем идти дальше." },
+          gatehall:  { name: "Врата логова", kind: "quiet", x: 62, y: 30, image: "img/bg/forest_wolfpath.jpg", visible: true,
+                       text: "Каменная арка, заросшая плющом, и тяжёлые створки: за ними логово. На створках вырезаны знаки.",
+                       look: {
+                         nothing: ["Ты осмотрел створки: знаки стёрлись, прочесть их не удаётся."],
+                         found: ["На створках вырезаны знаки, и ты разобрал их смысл."],
+                         clue: "wolfpath" } },
+          wolfpath:  { name: "Логово Вожака", kind: "boss", x: 62, y: 12, image: "img/bg/forest_wolfpath.jpg", visible: true,
+                       text: "Логово вожака стаи: вытоптанная земля, кости и клочья шерсти.",
+                       boss: { kind: "leader", scale: 0.85 },
+                       gate: { requires: ["brook", "hut", "ravine"], pick: { counts: { 1: 20, 2: 60, 3: 20 } },
+                               guard: { kind: "wolf", scale: 1, title: "Страж логова" } } }
         },
-        links: [["edge", "clearing"], ["clearing", "brook"], ["brook", "hut"], ["hut", "wolfpath"], ["hut", "oak"]]
+        links: [["edge", "clearing"], ["clearing", "brook"], ["clearing", "hut"], ["clearing", "ravine"], ["clearing", "crossroads"],
+                ["brook", "mill"], ["mill", "ravine"], ["mill", "crossroads"], ["hut", "cellar"], ["cellar", "crossroads"], ["ravine", "oak"], ["oak", "crossroads"],
+                ["crossroads", "gatehall"], ["gatehall", "wolfpath"]]
       }
     };
 
@@ -116,6 +149,7 @@
               Object.keys(f.items ?? {}).forEach(item => { if (!ITEMS[item]) bad(`${at}: в находке неизвестный предмет «${item}»`); });
               if (f.itemChance !== undefined && !(f.itemChance >= 0 && f.itemChance <= 1)) bad(`${at}: itemChance должен быть от 0 до 1`);
             }
+            if (look.clue && !(dungeon.nodes[look.clue]?.gate?.pick)) bad(`${at}: clue ссылается на узел «${look.clue}», у которого нет загадки ворот (gate.pick)`);
             if (look.reveal) {
               if (!Array.isArray(look.reveal.nodes) || !look.reveal.nodes.every(n => dungeon.nodes[n])) bad(`${at}: reveal ссылается на несуществующий узел`);
               if (!look.reveal.text) bad(`${at}: у reveal нужен text`);

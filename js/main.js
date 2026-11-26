@@ -21,6 +21,10 @@
     el("dun-home-btn").addEventListener("click", leaveDungeon);
     el("dun-hero-btn").addEventListener("click", () => openHero("dungeon"));
     el("dun-camp-btn").addEventListener("click", makeDungeonCamp);
+    el("dun-map").addEventListener("click", event => { // клик по месту на карте = переход, если тропа ведёт туда из текущего места
+      const target = event.target.closest("[data-go]");
+      if (target) travelInDungeon(target.dataset.go);
+    });
     el("gates-city-btn").addEventListener("click", showCapital);
     el("gates-hero-btn").addEventListener("click", () => openHero("gates"));
     el("shop-hero-btn").addEventListener("click", () => openHero("shop"));
