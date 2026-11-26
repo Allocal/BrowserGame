@@ -11,11 +11,21 @@
     const REGEN_SECONDS_FULL = 600;
     const TAVERN_BASE = 20, TAVERN_PER_LEVEL = 10; // цена полного отдыха в меди: база + за каждый уровень героя; при неполной потере — пропорционально
 
+    // Сколько секунд занимает полное восстановление с нуля там, где герой сейчас. null: здесь само не восстанавливается.
+    // В подземелье здоровье растёт только в безопасных точках (никто не обитает), в опасных и в бою не растёт.
+    function regenSecondsHere() {
+      if (!journey || journey.phase !== "capital") return null;
+      if (!journey.dungeon) return REGEN_SECONDS_FULL;
+      const state = journey.dungeon;
+      return nodeIsSafe(state, DUNGEONS[state.key], state.at) ? DUNGEON_RULES.safeRegenSeconds : null;
+    }
+
     function syncRegen(p) {
       const now = Date.now();
-      if (!journey || journey.phase !== "capital" || journey.dungeon || p.health >= p.maxHealth) { p.regenAt = now; return; }
+      const seconds = regenSecondsHere();
+      if (seconds === null || p.health >= p.maxHealth) { p.regenAt = now; return; }
       if (!Number.isFinite(p.regenAt) || p.regenAt > now) { p.regenAt = now; return; } // часы перевели назад — просто начинаем отсчёт заново
-      const perHpMs = REGEN_SECONDS_FULL * 1000 / p.maxHealth;
+      const perHpMs = seconds * 1000 / p.maxHealth;
       const gain = Math.floor((now - p.regenAt) / perHpMs);
       if (gain <= 0) return;
       p.health = Math.min(p.maxHealth, p.health + gain);

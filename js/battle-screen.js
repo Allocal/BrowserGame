@@ -77,8 +77,9 @@
 
     function regenClock(p) {
       if (p.health >= p.maxHealth) return "";
-      if (!journey || journey.phase !== "capital" || journey.dungeon) return "";
-      const perHpMs = REGEN_SECONDS_FULL * 1000 / p.maxHealth;
+      const seconds = regenSecondsHere();
+      if (seconds === null) return "";
+      const perHpMs = seconds * 1000 / p.maxHealth;
       const doneMs = Number.isFinite(p.regenAt) ? Math.max(0, Math.min(perHpMs, Date.now() - p.regenAt)) : 0; // уже накопленная часть текущего очка здоровья
       const sec = Math.max(1, Math.ceil(((p.maxHealth - p.health) * perHpMs - doneMs) / 1000));
       return `полное через ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;

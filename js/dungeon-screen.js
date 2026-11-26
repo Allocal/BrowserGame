@@ -5,7 +5,8 @@
     const DUNGEON_RULES = {
       campEveryFights: 4,      // сколько побед нужно между стоянками (подобрано замером, см. GDD)
       defeatHealthShare: 0.3,  // с каким здоровьем герой очнётся на входе после поражения
-      guardXpFactor: 2         // опыт за стража относительно обычного монстра того же вида
+      guardXpFactor: 2,        // опыт за стража относительно обычного монстра того же вида
+      safeRegenSeconds: 180    // сколько секунд реального времени занимает полное восстановление здоровья с нуля в безопасной точке (в городе 600)
     };
 
     const dungeonNeighbors = (dungeon, id) => dungeon.links.filter(l => l.includes(id)).map(l => (l[0] === id ? l[1] : l[0]));
@@ -34,6 +35,14 @@
     // Денежные суммы заканчиваются точкой («2 мед.»): лишнюю точку в конце предложения не ставим.
     const sentence = text => (text.endsWith(".") ? text : text + ".");
     const aliveCount = group => group.alive.filter(Boolean).length;
+    // Безопасная точка: никто не обитает (монстры перебиты, босс убит или его там не было). Считается на лету из того, что уже хранится.
+    function nodeIsSafe(state, dungeon, id) {
+      const node = dungeon.nodes[id];
+      const group = groupOf(state, dungeon, id);
+      const monstersLeft = Boolean(group) && aliveCount(group) > 0;
+      const bossLeft = Boolean(node.boss) && !state.bossDown.includes(id);
+      return !monstersLeft && !bossLeft;
+    }
     // Подземелье пройдено, когда побеждены все его боссы (и хотя бы один босс в нём есть). Тогда выйти к воротам можно с любого места.
     const dungeonCleared = (state, dungeon) => {
       const bosses = Object.keys(dungeon.nodes).filter(id => dungeon.nodes[id].boss);
@@ -222,6 +231,7 @@
       saveGame("capital");
       startBattle(fighter, foe, intro, `Подземелье: ${title}`, outcome => {
         recordFight("wild", outcome);
+        p.regenAt = Date.now(); // время боя не засчитывается как отдых
         state.mana = fighter.mana ?? state.mana;
         if (outcome !== "win") {
           // Ничья: враг остаётся жив. Иначе, если упал носитель ключа, а ключ не выдан, заход стал бы непроходимым.
@@ -299,6 +309,7 @@
       p.health = Math.max(1, Math.floor(p.maxHealth * DUNGEON_RULES.defeatHealthShare));
       state.deaths += 1;
       state.at = DUNGEONS[state.key].start;
+      p.regenAt = Date.now();
       state.loot = { copper: 0, items: {}, gear: [] };
       state.campLock = 0;
       state.log = "Тебя нашли и вынесли на опушку. Всё найденное в походе потеряно, а убитые монстры так и остались убитыми.";
