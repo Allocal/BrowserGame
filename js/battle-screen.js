@@ -317,6 +317,7 @@
 
     function startBattle(player, bot, introText, progressText, finishHandler, reserve = []) {
       game = createGame(player, bot, reserve);
+      setIntentMode(false);
       skillArmed = false;
       setAuto(false);
       onBattleFinish = finishHandler;

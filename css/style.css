@@ -257,3 +257,13 @@
     #battle-controls .zone { padding: 6px 10px; }
     #battle-log-box #result { margin: 0 0 6px; }
     #battle-log-box #log { margin-top: 6px; padding-top: 6px; }
+
+    /* ----- Бой по намерениям: намёк врага и три кнопки умений занимают левую часть панели вместо зон ----- */
+    #intent-controls { grid-column: 1 / -1; grid-row: 1 / 4; }
+    #intent-hint { font-size: 1.15rem; margin: 6px 0 10px; }
+    .intent-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+    .intent-skill { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 150px; max-width: 230px; padding: 8px 14px; text-align: left; }
+    .intent-skill .skill-name { font-weight: bold; }
+    .intent-skill small { opacity: 0.8; }
+    #battle-controls [hidden] { display: none !important; } /* иначе display у .zones и .actions перебивает атрибут hidden */
+    .intent-skill .skill-hint { opacity: 1; color: #c9d6e6; font-size: 0.78rem; }

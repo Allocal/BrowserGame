@@ -79,7 +79,7 @@
         dungeon: journey.dungeon ?? null,
         player: {
           direction: p.direction, copper: p.copper, name: p.name, level: p.level, xp: p.xp, strength: p.strength, endurance: p.endurance, agility: p.agility, attention: p.attention, intelligence: p.intelligence, classKey: p.classKey, classChosen: p.classChosen, spells: p.spells, skills: p.skills, pendingPoints: p.pendingPoints, arena: p.arena, regenAt: p.regenAt,
-          equipment: p.equipment, inventory: p.inventory, items: p.items, stats: p.stats, health: p.health
+          equipment: p.equipment, inventory: p.inventory, items: p.items, stats: p.stats, health: p.health, knowledge: p.knowledge ?? cleanKnowledge()
         }
       };
       try {
@@ -168,6 +168,7 @@
         grantFirstSkill(p);
         p.arena = cleanArena(sp.arena);
         p.stats = cleanStats(sp.stats);
+        p.knowledge = cleanKnowledge(sp.knowledge);
         p.regenAt = Number.isFinite(sp.regenAt) ? sp.regenAt : Date.now();
         refreshDerived(p);
         p.health = Math.min(sp.health, p.maxHealth);

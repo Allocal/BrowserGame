@@ -301,11 +301,14 @@
       const state = journey.dungeon;
       const t = WILD_ENEMIES[kind];
       const foeLevel = Math.min(p.level, DUNGEONS[state.key].maxEnemyLevel ?? Infinity); // потолок уровня врагов подземелья
-      const foe = createEnemy({ ...makeWildEnemy(kind, foeLevel, 1, scale), name: title });
+      // ВРЕМЕННО для проверки боя по намерениям: такой волк силён по уровню героя, иначе потолок леса делает бой пустым.
+      // Награда и добыча по-прежнему считаются от foeLevel, поэтому лишнего опыта это не даёт.
+      const fightLevel = useIntentBattle(p, kind) ? p.level : foeLevel;
+      const foe = createEnemy({ ...makeWildEnemy(kind, fightLevel, 1, scale), name: title });
       const xp = Math.max(1, Math.round(arenaBaseXp(foeLevel) * t.xp * xpFactor));
       const fighter = { ...p, name: `${p.name} (ур. ${p.level})`, startMana: Math.min(state.mana, p.maxMana) }; // мана между боями захода не возвращается
       saveGame("capital");
-      startBattle(fighter, foe, intro, `Подземелье: ${title}`, outcome => {
+      const finish = outcome => {
         recordFight("wild", outcome);
         p.regenAt = Date.now(); // время боя не засчитывается как отдых
         state.manaAt = Date.now();
@@ -328,7 +331,10 @@
         showAfterButton("Продолжить", () => {
           if (journey.levelsGained > 0) { afterLevelUp = showDungeon; showLevelUp(); } else showDungeon();
         });
-      }, []);
+      };
+      // Волк и маг идут по новому бою по намерениям (прототип), остальные по старому с зонами.
+      if (useIntentBattle(fighter, kind)) startIntentBattle(fighter, foe, kind, intro, `Подземелье: ${title}`, finish);
+      else startBattle(fighter, foe, intro, `Подземелье: ${title}`, finish, []);
       el("player-xp").textContent = `Опыт: ${xpLine(p)}`;
     }
 
