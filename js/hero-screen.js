@@ -281,6 +281,20 @@
     }
 
     function renderHeroSkills(p, body) {
+      if (p.classKey === "mage") {
+        // Ранги умений боя по намерениям: растут от применения, до стены SKILL_WALL сами.
+        const pts = p.skillPoints ?? cleanSkillPoints();
+        const ranks = mk("div", "cards");
+        RANKED_SKILLS.forEach(key => {
+          const { rank, percent } = skillRank(pts[key]);
+          const power = `сила +${Math.round(rankPower(rank) * 100)}%`;
+          const sub = rank === SKILL_WALL ? `предел без учителя · ${power}` : `${percent}% до ранга ${rank + 1} · ${power}`;
+          ranks.appendChild(statCard(INTENT_SKILLS[key].name, `ранг ${rank}`, sub, "stat-violet", [], "flask"));
+        });
+        body.append(mk("div", "section-title", "Ранги заклинаний"), ranks,
+          mk("p", "muted", "Ранг растёт от применения в бою, быстрее — если заклинание хорошо отвечает на приём врага."));
+        if (p.skills.learned.length === 0) return;
+      }
       if (p.skills.learned.length === 0) {
         body.appendChild(mk("p", "muted", "Умений пока нет. Их можно выучить у учителя в городе."));
         return;

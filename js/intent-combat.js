@@ -28,12 +28,15 @@
     const INTENT_SKILLS = {
       frostBolt: { name: "Ледяная стрела", role: "attack",  delivery: "bolt",   cost: 4, cooldown: 0,
         hint: "Бьёт в полную силу. Мимо, если враг уходит от удара.",
+        goodVs: ["fast", "heavy"],
         vs: { fast: { take: 1.0, deal: 1 }, heavy: { take: 1.0, deal: 1 }, evasive: { take: 1.0, deal: 0 } } },
       barrier:   { name: "Барьер",         role: "defense", delivery: "self",   cost: 3, cooldown: 0,
         hint: "Почти гасит один тяжёлый удар и контрудар, серию слабо. Бьёт слабо.",
+        goodVs: ["heavy", "evasive"],
         vs: { fast: { take: 0.8, deal: 0.4 }, heavy: { take: 0.1, deal: 0.4 }, evasive: { take: 0.2, deal: 0 } } },
       timidity:  { name: "Робость",        role: "control", delivery: "effect", cost: 8, cooldown: 4,
         hint: "Враг слабее бьёт 3 хода. Сам ход ты не бьёшь.",
+        goodVs: ["fast", "heavy"],
         vs: { fast: { take: 1.0, deal: 0 }, heavy: { take: 1.0, deal: 0 }, evasive: { take: 1.0, deal: 0 } },
         effect: { weaken: 0.7, turns: 3 } },
       // Запасное умение: доступно только когда ни на одно заклинание не хватает маны (иначе бой с пустой маной встал бы).
@@ -41,6 +44,14 @@
         hint: "Слабый удар без маны. Доступен, только когда маны не хватает.",
         vs: { fast: { take: 1.0, deal: 0.25 }, heavy: { take: 1.0, deal: 0.25 }, evasive: { take: 1.0, deal: 0 } } }
     };
+
+    // Сколько очков прогресса получит умение за применение против этого типа приёма: больше, если ответ хороший (goodVs в паспорте умения).
+    function skillPointsFor(skillKey, moveKind) {
+      return INTENT_SKILLS[skillKey].goodVs?.includes(moveKind) ? SKILL_POINTS.good : SKILL_POINTS.use;
+    }
+
+    // Усиление умения от ранга в этом бою (0 у умений без рангов, например у удара посохом).
+    const rankBonus = (game, skillKey) => rankPower(game.skillRanks[skillKey] ?? 1);
 
     // Средняя броня героя по четырём зонам: в бою по намерениям зон нет, поэтому броня считается одной цифрой.
     const meanArmor = c => c.gear.armor.reduce((a, b) => a + b, 0) / c.gear.armor.length;
@@ -50,13 +61,15 @@
     function resolveEnemyMove(game, answerKey) {
       const move = MOVES[game.move];
       const answer = INTENT_SKILLS[answerKey].vs[move.kind];
+      // Ранг защиты срезает ещё больше урона; у остальных умений take не трогаем (они и не защищают).
+      const take = INTENT_SKILLS[answerKey].role === "defense" ? answer.take * (1 - rankBonus(game, answerKey)) : answer.take;
       const weaken = game.weakenTurns > 0 ? game.weakenFactor : 1;
       const profile = game.bot.strikeDamages[0];
       const hits = Array.from({ length: move.hits }, () => {
         const crit = Math.random() * 100 < critChance(profile, game.bot, game.player);
         const dodged = Math.random() * 100 < dodgeChance(game.player, game.bot);
         // Крит пробивает защиту: срез ответа (take) к нему не применяется (решение по умолчанию, см. документ).
-        const raw = randInt(profile.min, profile.max) * INTENT_TUNING.enemyDamage * move.power * weaken * (crit ? (profile.critMult ?? CRIT_MULTIPLIER) : answer.take);
+        const raw = randInt(profile.min, profile.max) * INTENT_TUNING.enemyDamage * move.power * weaken * (crit ? (profile.critMult ?? CRIT_MULTIPLIER) : take);
         return { crit, dodged, damage: dodged ? 0 : reduceDamage(Math.round(raw), meanArmor(game.player)) };
       });
       return { hits, total: hits.reduce((sum, h) => sum + h.damage, 0) };
@@ -77,21 +90,23 @@
         const profile = game.player.spellDamage;
         result.crit = Math.random() * 100 < critChance(profile, game.player, game.bot);
         result.dodged = Math.random() * 100 < dodgeChance(game.bot, game.player);
-        const raw = randInt(profile.min, profile.max) * INTENT_TUNING.heroDamage * (result.crit ? (profile.critMult ?? CRIT_MULTIPLIER) : 1) * answer.deal;
+        const raw = randInt(profile.min, profile.max) * INTENT_TUNING.heroDamage * (result.crit ? (profile.critMult ?? CRIT_MULTIPLIER) : 1) * answer.deal * (1 + rankBonus(game, skillKey));
         result.damage = result.dodged ? 0 : reduceDamage(Math.round(raw), game.bot.magicResist ?? 0);
       }
       if (skill.effect) {
-        const power = Math.max(0, game.player.intelligence - BASE_STAT);
+        // Ранг воздействия действует как прибавка к Интеллекту: каждые 5% силы ранга — одно очко (число черновое).
+        const power = Math.max(0, game.player.intelligence - BASE_STAT) + rankBonus(game, skillKey) * 20;
         result.effectApplied = Math.random() * 100 < chanceOf(EFFECT_BASE, power - (game.bot.magicResist ?? 0), EFFECT_K);
       }
       return result;
     }
 
     // Новый бой по намерениям. move — приём врага на текущий ход (его видно игроку, насколько позволяет знание);
-    // weakenTurns и weakenFactor — действующая «Робость»; cooldowns — сколько ходов ещё недоступно каждое умение.
-    function createIntentGame(player, bot, monsterKind) {
+    // weakenTurns и weakenFactor — действующая «Робость»; cooldowns — сколько ходов ещё недоступно каждое умение;
+    // skillRanks — ранги умений героя ({ frostBolt: 2, ... }), растут прямо в бою.
+    function createIntentGame(player, bot, monsterKind, skillRanks = {}) {
       player.mana = player.startMana ?? player.maxMana ?? 0; // как в старом бое: полная мана, кроме вылазки
-      return { player, bot, monsterKind, move: pickMove(monsterKind), weakenTurns: 0, weakenFactor: 1, cooldowns: {}, turn: 0 };
+      return { player, bot, monsterKind, move: pickMove(monsterKind), weakenTurns: 0, weakenFactor: 1, cooldowns: {}, turn: 0, skillRanks: { ...skillRanks } };
     }
 
     // Можно ли применить умение: оно не на перезарядке и хватает маны.

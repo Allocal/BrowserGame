@@ -18,7 +18,9 @@
 
     function startIntentBattle(player, bot, kind, introText, progressText, finishHandler) {
       journey.player.knowledge ??= cleanKnowledge(); // знание хранится у настоящего героя, а не у копии на время боя
-      game = createIntentGame(player, bot, kind);
+      journey.player.skillPoints ??= cleanSkillPoints(); // очки умений тоже
+      const pts = journey.player.skillPoints;
+      game = createIntentGame(player, bot, kind, Object.fromEntries(RANKED_SKILLS.map(key => [key, skillRank(pts[key]).rank])));
       game.reserve = []; // общий showBot спрашивает очередь врагов; в новом бою она пока пустая
       skillArmed = false;
       setAuto(false);
@@ -55,7 +57,8 @@
         const note = cd > 0 ? `через ${cd} ход.` : (game.player.mana < skill.cost ? "не хватает маны" : `мана −${skill.cost}`);
         const btn = document.createElement("button");
         btn.className = "intent-skill";
-        btn.innerHTML = `<span class="skill-name">${skill.name}</span><small>${note}</small><small class="skill-hint">${skill.hint}</small>`;
+        const rank = game.skillRanks[key] ? ` · ранг ${game.skillRanks[key]}` : "";
+        btn.innerHTML = `<span class="skill-name">${skill.name}${rank}</span><small>${note}</small><small class="skill-hint">${skill.hint}</small>`;
         btn.title = skill.hint;
         btn.disabled = game.over || intentAutoOn || !canUseSkill(game, key);
         btn.addEventListener("click", () => onIntentTurn(key));
@@ -93,6 +96,7 @@
 
     function onIntentTurn(skillKey) {
       const result = playIntentTurn(game, skillKey);
+      result.rankUp = awardSkillPoints(skillKey, result.movePlayed);
       logIntentTurn(skillKey, result);
       refreshHealth();
       if (result.outcome) {
@@ -104,6 +108,19 @@
         onBattleFinish(result.outcome);
       }
       renderIntentControls();
+    }
+
+    // Очки умению за применение (больше за хороший ответ на приём). Записываются настоящему герою, ранг растёт прямо в бою.
+    // Возвращает новый ранг, если он вырос, иначе null.
+    function awardSkillPoints(skillKey, movePlayed) {
+      if (!RANKED_SKILLS.includes(skillKey)) return null;
+      const pts = journey.player.skillPoints;
+      const before = skillRank(pts[skillKey]).rank;
+      pts[skillKey] += skillPointsFor(skillKey, MOVES[movePlayed].kind);
+      const after = skillRank(pts[skillKey]).rank;
+      if (after === before) return null;
+      game.skillRanks[skillKey] = after;
+      return after;
     }
 
     function logIntentTurn(skillKey, result) {
@@ -131,6 +148,7 @@
           ? { text: "★ ТЫ УКЛОНИЛСЯ!", cls: "dodge" }
           : { text: `${h.crit ? "★ КРИТИЧЕСКИЙ УДАР! " : ""}-${h.damage} тебе`, cls: h.crit ? "crit" : "hit" });
       });
+      if (result.rankUp) lines.push({ text: `★ «${skill.name}» растёт: ранг ${result.rankUp}${result.rankUp === SKILL_WALL ? " (дальше нужен учитель)" : ""}`, cls: "crit" });
       // prepend ставит строки сверху, поэтому пишем в обратном порядке: ход окажется наверху целиком.
       lines.reverse().forEach(l => addLogLine(l.text, l.cls));
     }
